@@ -22,30 +22,27 @@ import {
 import { cn } from "@/lib/utils"
 
 const destinations = [
-  { value: "europa", label: "Europa" },
-  { value: "norteamerica", label: "Norteamerica" },
-  { value: "centroamerica", label: "Centroamerica y Caribe" },
-  { value: "sudamerica", label: "Sudamerica" },
-  { value: "asia", label: "Asia" },
-  { value: "africa", label: "Africa" },
-  { value: "oceania", label: "Oceania" },
-  { value: "mundial", label: "Cobertura Mundial" },
+  { value: "1001", label: "Europa" },
+  { value: "1004", label: "Norteamérica" },
+  { value: "1000", label: "Latinoamérica" },
+  { value: "1003", label: "Resto del Mundo" },
+  { value: "1002", label: "Nacional" },
 ]
 
-const coverageTypes = [
-  { value: "basica", label: "Basica" },
-  { value: "estandar", label: "Estandar" },
-  { value: "premium", label: "Premium" },
-  { value: "empresarial", label: "Empresarial" },
+const tripTypes = [
+  { value: "ONE_TRIP", label: "Un viaje" },
+  { value: "MULTI_TRIP30", label: "Multi 30 días" },
+  { value: "MULTI_TRIP60", label: "Multi 60 días" },
+  { value: "MULTI_TRIP90", label: "Multi 90 días" },
 ]
 
 export type QuotationData = {
-  destination: string
-  tripType: string
-  startDate: Date | undefined
-  endDate: Date | undefined
-  passengers: number[]
-  coverage: string
+  destino: string
+  tipoViaje: string
+  desde: string // Formato: YYYY-MM-DD
+  hasta: string // Formato: YYYY-MM-DD
+  edades: string[] // Array de strings
+  origen: string // Siempre "AR" (Argentina)
 }
 
 type QuotationFormProps = {
@@ -54,12 +51,11 @@ type QuotationFormProps = {
 }
 
 export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
-  const [destination, setDestination] = useState("")
-  const [tripType, setTripType] = useState("")
+  const [destino, setDestino] = useState("")
+  const [tipoViaje, setTipoViaje] = useState("")
   const [startDate, setStartDate] = useState<Date | undefined>()
   const [endDate, setEndDate] = useState<Date | undefined>()
   const [passengers, setPassengers] = useState<number[]>([30])
-  const [coverage, setCoverage] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const addPassenger = () => {
@@ -83,18 +79,27 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
     }
   }
 
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const day = String(date.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}`
+  }
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
-    if (!destination) newErrors.destination = "Seleccione un destino"
-    if (!tripType) newErrors.tripType = "Seleccione el tipo de viaje"
+    if (!destino) newErrors.destino = "Seleccione un destino"
+    if (!tipoViaje) newErrors.tipoViaje = "Seleccione el tipo de viaje"
     if (!startDate) newErrors.startDate = "Seleccione fecha de inicio"
     if (!endDate) newErrors.endDate = "Seleccione fecha de fin"
     if (startDate && endDate && startDate >= endDate) {
       newErrors.endDate = "La fecha de fin debe ser posterior a la de inicio"
     }
-    if (!coverage) newErrors.coverage = "Seleccione tipo de cobertura"
     if (passengers.some((age) => age < 0 || age > 120)) {
       newErrors.passengers = "Las edades deben estar entre 0 y 120"
+    }
+    if (passengers.length === 0) {
+      newErrors.passengers = "Debe haber al menos un pasajero"
     }
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -102,8 +107,25 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (validate()) {
-      onSubmit({ destination, tripType, startDate, endDate, passengers, coverage })
+    if (validate() && startDate && endDate) {
+      // Convertir fechas a formato YYYY-MM-DD
+      const desde = formatDate(startDate)
+      const hasta = formatDate(endDate)
+      
+      // Convertir edades a array de strings
+      const edades = passengers.map((age) => String(age))
+      
+      // Origen siempre es AR (Argentina)
+      const origen = "AR"
+      
+      onSubmit({
+        destino,
+        tipoViaje,
+        desde,
+        hasta,
+        edades,
+        origen,
+      })
     }
   }
 
@@ -120,9 +142,9 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
           {/* Destination and Trip Type */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="destination" className="text-foreground">Destino</Label>
-              <Select value={destination} onValueChange={setDestination}>
-                <SelectTrigger id="destination" className="bg-background">
+              <Label htmlFor="destino" className="text-foreground">Destino</Label>
+              <Select value={destino} onValueChange={setDestino}>
+                <SelectTrigger id="destino" className="bg-background">
                   <SelectValue placeholder="Seleccione destino" />
                 </SelectTrigger>
                 <SelectContent>
@@ -133,23 +155,26 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.destination && (
-                <p className="text-xs text-destructive">{errors.destination}</p>
+              {errors.destino && (
+                <p className="text-xs text-destructive">{errors.destino}</p>
               )}
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="tripType" className="text-foreground">Tipo de viaje</Label>
-              <Select value={tripType} onValueChange={setTripType}>
-                <SelectTrigger id="tripType" className="bg-background">
+              <Label htmlFor="tipoViaje" className="text-foreground">Tipo de viaje</Label>
+              <Select value={tipoViaje} onValueChange={setTipoViaje}>
+                <SelectTrigger id="tipoViaje" className="bg-background">
                   <SelectValue placeholder="Seleccione tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unico">Viaje unico</SelectItem>
-                  <SelectItem value="multiple">Viajes multiples (anual)</SelectItem>
+                  {tripTypes.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {errors.tripType && (
-                <p className="text-xs text-destructive">{errors.tripType}</p>
+              {errors.tipoViaje && (
+                <p className="text-xs text-destructive">{errors.tipoViaje}</p>
               )}
             </div>
           </div>
@@ -261,26 +286,6 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
             </div>
             {errors.passengers && (
               <p className="text-xs text-destructive">{errors.passengers}</p>
-            )}
-          </div>
-
-          {/* Coverage */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="coverage" className="text-foreground">Tipo de cobertura</Label>
-            <Select value={coverage} onValueChange={setCoverage}>
-              <SelectTrigger id="coverage" className="bg-background md:w-1/2">
-                <SelectValue placeholder="Seleccione cobertura" />
-              </SelectTrigger>
-              <SelectContent>
-                {coverageTypes.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.coverage && (
-              <p className="text-xs text-destructive">{errors.coverage}</p>
             )}
           </div>
 

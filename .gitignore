@@ -12,4 +12,5 @@ coverage
 *.swp
 *.swo
 *.pid
-*.seed              
+*.seed
+.next              

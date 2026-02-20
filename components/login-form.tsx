@@ -1,49 +1,63 @@
 "use client"
 
 import React from "react"
-
 import { useState } from "react"
-import { Plane, Shield, Globe, Clock, Award, TrendingUp, Users, Sparkles } from "lucide-react"
+import { Plane, Shield, Globe, Clock, Award, TrendingUp, Users, Sparkles, Mail, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/lib/auth-context"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { toast } from "sonner"
+
+// Schema de validación con Zod
+const loginSchema = z.object({
+  userName: z.string()
+    .min(1, "El nombre de usuario es obligatorio"),
+  password: z.string()
+    .min(1, "La contraseña es obligatoria")
+    .min(6, "La contraseña debe tener al menos 6 caracteres"),
+})
+
+type LoginFormData = z.infer<typeof loginSchema>
 
 export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const { login } = useAuth()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    mode: "onBlur",
+  })
 
-    if (!email.trim()) {
-      setError("El email es obligatorio")
-      return
-    }
-    if (!password.trim()) {
-      setError("La contrasena es obligatoria")
-      return
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError("Ingrese un email valido")
-      return
-    }
-
+  const onSubmit = async (data: LoginFormData) => {
     setLoading(true)
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 800))
-    const success = login(email, password)
-    setLoading(false)
 
-    if (success) {
-      onSuccess()
-    } else {
-      setError("Credenciales incorrectas")
+    try {
+      const success = await login(data.userName, data.password)
+
+      if (success) {
+        toast.success("¡Bienvenido a Biant!", {
+          description: "Inicio de sesión exitoso",
+        })
+        onSuccess()
+      } else {
+        toast.error("Credenciales incorrectas", {
+          description: "Por favor verifica tu nombre de usuario y contraseña",
+        })
+      }
+    } catch (error: any) {
+      toast.error("Error al iniciar sesión", {
+        description: error.message || "Ocurrió un error inesperado. Intenta nuevamente.",
+      })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -77,93 +91,79 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-between p-8 xl:p-12 2xl:p-16 text-white w-full h-full overflow-y-auto">
-          {/* Logo and brand */}
-          <div className="space-y-6">
+        <div className="relative z-10 flex flex-col justify-center p-8 xl:p-12 text-white w-full h-full overflow-y-auto">
+          <div className="space-y-6 max-w-lg">
+            {/* Logo and brand */}
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 xl:h-14 xl:w-14 items-center justify-center rounded-2xl bg-accent shadow-2xl shadow-accent/50">
-                <Plane className="h-6 w-6 xl:h-7 xl:w-7 text-white" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl">
+                <img className='avatar rounded-md' src="/biantlogo.jpg" alt="" />
               </div>
               <div>
-                <h1 className="text-2xl xl:text-3xl font-bold tracking-tight">TravelAssist Pro</h1>
-                <p className="text-white/80 text-xs xl:text-sm">Plataforma de Cotización Inteligente</p>
+                <h1 className="text-2xl font-bold tracking-tight">Biant</h1>
+                <p className="text-white/90 text-sm">Llevamos tranquilidad</p>
               </div>
             </div>
 
-            <div className="space-y-4 max-w-xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
-                <Sparkles className="h-3.5 w-3.5 text-accent" />
-                <span className="text-xs font-medium">La mejor herramienta del mercado</span>
+            {/* Hero text */}
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/25 backdrop-blur-sm border border-accent/40">
+                <Sparkles className="h-3.5 w-3.5 text-white" />
+                <span className="text-xs font-medium text-white">Plataforma de Asistencia al Viajero</span>
               </div>
 
-              <h2 className="text-3xl xl:text-4xl 2xl:text-5xl font-bold leading-tight">
-                Cotizaciones de viaje en{" "}
-                <span className="text-accent">segundos</span>
+              <h2 className="text-3xl xl:text-4xl font-bold leading-tight">
+                Simplificamos tus{" "}
+                <span className="text-accent font-black">cotizaciones</span>
               </h2>
 
-              <p className="text-base xl:text-lg text-white/80 leading-relaxed">
-                Compara instantáneamente múltiples proveedores de asistencia al viajero
-                y cierra más ventas con las mejores opciones para tus clientes.
+              <p className="text-base text-white/95 leading-relaxed">
+                Compará precios de múltiples proveedores en tiempo real
+                y ofrecé las mejores opciones a tus clientes.
               </p>
             </div>
-          </div>
 
-          {/* Features grid */}
-          <div className="grid grid-cols-2 gap-4 xl:gap-5 max-w-2xl">
-            <div className="group flex items-start gap-3 p-4 xl:p-5 rounded-xl xl:rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all">
-              <div className="flex h-10 w-10 xl:h-12 xl:w-12 items-center justify-center rounded-lg xl:rounded-xl bg-white/10 shrink-0">
-                <Shield className="h-5 w-5 xl:h-6 xl:w-6 text-accent" />
+            {/* Features list */}
+            <div className="space-y-3 pt-2">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm shrink-0 mt-0.5">
+                  <Shield className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base mb-0.5 text-white">Seguridad y Confianza</h3>
+                  <p className="text-sm text-white/85 leading-snug">
+                    Trabajamos con las mejores aseguradoras para garantizar
+                    la protección de tus clientes.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-sm xl:text-base mb-0.5">Seguro y Confiable</h3>
-                <p className="text-xs xl:text-sm text-white/70">Protección garantizada</p>
-              </div>
-            </div>
 
-            <div className="group flex items-start gap-3 p-4 xl:p-5 rounded-xl xl:rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all">
-              <div className="flex h-10 w-10 xl:h-12 xl:w-12 items-center justify-center rounded-lg xl:rounded-xl bg-white/10 shrink-0">
-                <Clock className="h-5 w-5 xl:h-6 xl:w-6 text-accent" />
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm shrink-0 mt-0.5">
+                  <Clock className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base mb-0.5 text-white">Cotización Instantánea</h3>
+                  <p className="text-sm text-white/85 leading-snug">
+                    Resultados en segundos. Comparación automática
+                    de todas las opciones disponibles.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-sm xl:text-base mb-0.5">Ahorra Tiempo</h3>
-                <p className="text-xs xl:text-sm text-white/70">Cotización instantánea</p>
-              </div>
-            </div>
 
-            <div className="group flex items-start gap-3 p-4 xl:p-5 rounded-xl xl:rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all">
-              <div className="flex h-10 w-10 xl:h-12 xl:w-12 items-center justify-center rounded-lg xl:rounded-xl bg-white/10 shrink-0">
-                <Globe className="h-5 w-5 xl:h-6 xl:w-6 text-accent" />
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm shrink-0 mt-0.5">
+                  <Globe className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base mb-0.5 text-white">Cobertura Global</h3>
+                  <p className="text-sm text-white/85 leading-snug">
+                    Asistencia para todos los destinos del mundo,
+                    desde viajes regionales hasta internacionales.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-sm xl:text-base mb-0.5">Cobertura Global</h3>
-                <p className="text-xs xl:text-sm text-white/70">Destinos en todo el mundo</p>
-              </div>
-            </div>
 
-            <div className="group flex items-start gap-3 p-4 xl:p-5 rounded-xl xl:rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all">
-              <div className="flex h-10 w-10 xl:h-12 xl:w-12 items-center justify-center rounded-lg xl:rounded-xl bg-white/10 shrink-0">
-                <TrendingUp className="h-5 w-5 xl:h-6 xl:w-6 text-accent" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm xl:text-base mb-0.5">Mejores Precios</h3>
-                <p className="text-xs xl:text-sm text-white/70">Compara y ahorra</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center gap-8 xl:gap-12 pt-6 border-t border-white/10">
-            <div>
-              <div className="text-2xl xl:text-3xl 2xl:text-4xl font-bold text-accent">+50K</div>
-              <div className="text-xs xl:text-sm text-white/70">Cotizaciones realizadas</div>
-            </div>
-            <div>
-              <div className="text-2xl xl:text-3xl 2xl:text-4xl font-bold text-accent">+2.5K</div>
-              <div className="text-xs xl:text-sm text-white/70">Agencias activas</div>
-            </div>
-            <div>
-              <div className="text-2xl xl:text-3xl 2xl:text-4xl font-bold text-accent">98%</div>
-              <div className="text-xs xl:text-sm text-white/70">Satisfacción</div>
+           
             </div>
           </div>
         </div>
@@ -173,78 +173,96 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       <div className="flex w-full lg:w-[45%] items-center justify-center p-4 sm:p-6 relative z-10 overflow-y-auto">
         <div className="w-full max-w-md my-auto">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 justify-center mb-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent shadow-lg shadow-accent/30">
-              <Plane className="h-6 w-6 text-white" />
+          <div className="lg:hidden flex items-center gap-3 justify-center mb-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent shadow-lg shadow-accent/30">
+              <Plane className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">TravelAssist Pro</h1>
-              <p className="text-xs text-muted-foreground">Cotización Inteligente</p>
+              <h1 className="text-2xl font-bold text-foreground">Biant</h1>
+              <p className="text-xs text-muted-foreground">Cotizador Profesional</p>
             </div>
           </div>
 
           {/* Login card */}
-          <div className="space-y-5 p-6 sm:p-8 rounded-3xl bg-card/50 backdrop-blur-sm border border-border shadow-2xl">
-            <div className="space-y-2">
+          <div className="space-y-6 p-6 sm:p-8 rounded-3xl bg-card border border-border shadow-2xl">
+            <div className="space-y-3">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20">
                 <Users className="h-3.5 w-3.5 text-accent" />
                 <span className="text-xs font-medium text-accent">Portal de Agentes</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Bienvenido de nuevo</h2>
-              <p className="text-sm text-muted-foreground">Ingresa tus credenciales para acceder a tu cuenta</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Iniciar Sesión</h2>
+              <p className="text-sm text-muted-foreground">Ingresá tus credenciales para acceder</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              {/* UserName field */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground font-semibold text-sm">
-                  Correo Electrónico
+                <Label htmlFor="userName" className="text-foreground font-medium text-sm">
+                  Nombre de Usuario
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="tu@agencia.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-11 sm:h-12 bg-background/50 border-2 border-input focus:border-accent transition-colors pl-4 text-base"
-                  autoComplete="email"
-                />
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="userName"
+                    type="text"
+                    placeholder="adminfran"
+                    {...register("userName")}
+                    className={`h-12 bg-background border-2 pl-11 text-base transition-colors ${
+                      errors.userName
+                        ? "border-destructive focus:border-destructive"
+                        : "border-input focus:border-accent"
+                    }`}
+                    autoComplete="username"
+                  />
+                </div>
+                {errors.userName && (
+                  <p className="text-sm text-destructive font-medium flex items-center gap-1.5">
+                    <span className="h-1 w-1 rounded-full bg-destructive" />
+                    {errors.userName.message}
+                  </p>
+                )}
               </div>
 
+              {/* Password field */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-foreground font-semibold text-sm">
+                  <Label htmlFor="password" className="text-foreground font-medium text-sm">
                     Contraseña
                   </Label>
                   <button
                     type="button"
-                    className="text-xs sm:text-sm text-accent hover:text-accent/80 font-medium transition-colors"
+                    className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
                   >
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 sm:h-12 bg-background/50 border-2 border-input focus:border-accent transition-colors pl-4 text-base"
-                  autoComplete="current-password"
-                />
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    {...register("password")}
+                    className={`h-12 bg-background border-2 pl-11 text-base transition-colors ${
+                      errors.password
+                        ? "border-destructive focus:border-destructive"
+                        : "border-input focus:border-accent"
+                    }`}
+                    autoComplete="current-password"
+                  />
+                </div>
+                {errors.password && (
+                  <p className="text-sm text-destructive font-medium flex items-center gap-1.5">
+                    <span className="h-1 w-1 rounded-full bg-destructive" />
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
 
-              {error && (
-                <div className="p-3 rounded-xl bg-destructive/10 border-2 border-destructive/30 animate-in slide-in-from-top-2">
-                  <p className="text-sm font-medium text-destructive flex items-center gap-2" role="alert">
-                    <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
-                    {error}
-                  </p>
-                </div>
-              )}
-
+              {/* Submit button */}
               <Button
                 type="submit"
-                className="w-full h-11 sm:h-12 text-base font-semibold bg-accent hover:bg-accent/90 shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 transition-all"
+                className="w-full h-12 text-base font-semibold bg-accent hover:bg-accent/90 shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 transition-all"
                 disabled={loading}
               >
                 {loading ? (
@@ -260,30 +278,16 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
                 )}
               </Button>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-card px-3 text-muted-foreground">Modo demo</span>
-                </div>
-              </div>
-
-              <div className="p-3 sm:p-4 rounded-xl bg-accent/5 border border-accent/20">
-                <p className="text-xs sm:text-sm text-center text-muted-foreground flex items-center justify-center gap-2">
-                  <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent" />
-                  Usa cualquier email y contraseña para probar
-                </p>
-              </div>
+              
             </form>
           </div>
 
           {/* Footer */}
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            Al iniciar sesión, aceptas nuestros{" "}
-            <a href="#" className="text-accent hover:underline">Términos de Servicio</a>
+          <p className="text-center text-xs text-muted-foreground mt-6">
+            Al iniciar sesión, aceptás nuestros <br />
+            <a href="#" className="text-accent hover:underline font-medium">Términos de Servicio</a>
             {" "}y{" "}
-            <a href="#" className="text-accent hover:underline">Política de Privacidad</a>
+            <a href="#" className="text-accent hover:underline font-medium">Política de Privacidad</a>
           </p>
         </div>
       </div>
