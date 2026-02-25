@@ -14,8 +14,9 @@ import { toast } from "sonner"
 
 // Schema de validación con Zod
 const loginSchema = z.object({
-  userName: z.string()
-    .min(1, "El nombre de usuario es obligatorio"),
+  email: z.string()
+    .min(1, "El email es obligatorio")
+    .email("El email no es válido"),
   password: z.string()
     .min(1, "La contraseña es obligatoria")
     .min(6, "La contraseña debe tener al menos 6 caracteres"),
@@ -40,7 +41,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     setLoading(true)
 
     try {
-      const success = await login(data.userName, data.password)
+      const success = await login(data.email, data.password)
 
       if (success) {
         toast.success("¡Bienvenido a Biant!", {
@@ -49,7 +50,7 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         onSuccess()
       } else {
         toast.error("Credenciales incorrectas", {
-          description: "Por favor verifica tu nombre de usuario y contraseña",
+          description: "Por favor verifica tu email y contraseña",
         })
       }
     } catch (error: any) {
@@ -197,28 +198,28 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* UserName field */}
               <div className="space-y-2">
-                <Label htmlFor="userName" className="text-foreground font-medium text-sm">
-                  Nombre de Usuario
+                <Label htmlFor="email" className="text-foreground font-medium text-sm">
+                  Email
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
-                    id="userName"
-                    type="text"
-                    placeholder="adminfran"
-                    {...register("userName")}
+                    id="email"
+                    type="email"
+                    placeholder="usuario@ejemplo.com"
+                    {...register("email")}
                     className={`h-12 bg-background border-2 pl-11 text-base transition-colors ${
-                      errors.userName
+                      errors.email
                         ? "border-destructive focus:border-destructive"
                         : "border-input focus:border-accent"
                     }`}
-                    autoComplete="username"
+                    autoComplete="email"
                   />
                 </div>
-                {errors.userName && (
+                {errors.email && (
                   <p className="text-sm text-destructive font-medium flex items-center gap-1.5">
                     <span className="h-1 w-1 rounded-full bg-destructive" />
-                    {errors.userName.message}
+                    {errors.email.message}
                   </p>
                 )}
               </div>

@@ -1,11 +1,10 @@
 "use client"
 
-import React from "react"
-
-import { useState } from "react"
-import { CalendarIcon, Plus, Trash2 } from "lucide-react"
-import { format } from "date-fns"
+import React, { useState } from "react"
+import { CalendarIcon, Plus, Trash2, ArrowRight } from "lucide-react"
+import { format, startOfDay, isBefore, differenceInDays } from "date-fns"
 import { es } from "date-fns/locale"
+import type { DateRange } from "react-day-picker"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -27,7 +26,7 @@ const destinations = [
   { value: "1000", label: "Latinoamérica" },
   { value: "1003", label: "Resto del Mundo" },
   { value: "1002", label: "Nacional" },
-]
+]//para que no queden iguales
 
 const tripTypes = [
   { value: "ONE_TRIP", label: "Un viaje" },
@@ -35,14 +34,14 @@ const tripTypes = [
   { value: "MULTI_TRIP60", label: "Multi 60 días" },
   { value: "MULTI_TRIP90", label: "Multi 90 días" },
 ]
-
+//aca tambien
 export type QuotationData = {
   destino: string
   tipoViaje: string
-  desde: string // Formato: YYYY-MM-DD
-  hasta: string // Formato: YYYY-MM-DD
-  edades: string[] // Array de strings
-  origen: string // Siempre "AR" (Argentina)
+  desde: string
+  hasta: string
+  edades: string[]
+  origen: string
 }
 
 type QuotationFormProps = {
@@ -53,8 +52,9 @@ type QuotationFormProps = {
 export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
   const [destino, setDestino] = useState("")
   const [tipoViaje, setTipoViaje] = useState("")
-  const [startDate, setStartDate] = useState<Date | undefined>()
-  const [endDate, setEndDate] = useState<Date | undefined>()
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+  const [tempRange, setTempRange] = useState<DateRange | undefined>()
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const [passengers, setPassengers] = useState<number[]>([30])
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -86,15 +86,37 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
     return `${year}-${month}-${day}`
   }
 
+  const totalDays =
+    tempRange?.from && tempRange?.to
+      ? differenceInDays(tempRange.to, tempRange.from) + 1
+      : null
+
+  const handleOpenCalendar = (open: boolean) => {
+    if (open) {
+      // Al abrir, inicializar el temp con el rango confirmado
+      setTempRange(dateRange)
+    }
+    setCalendarOpen(open)
+  }
+
+  const handleApply = () => {
+    if (tempRange?.from && tempRange?.to) {
+      setDateRange(tempRange)
+    }
+    setCalendarOpen(false)
+  }
+
+  const handleClear = () => {
+    setTempRange(undefined)
+    setDateRange(undefined)
+  }
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
     if (!destino) newErrors.destino = "Seleccione un destino"
     if (!tipoViaje) newErrors.tipoViaje = "Seleccione el tipo de viaje"
-    if (!startDate) newErrors.startDate = "Seleccione fecha de inicio"
-    if (!endDate) newErrors.endDate = "Seleccione fecha de fin"
-    if (startDate && endDate && startDate >= endDate) {
-      newErrors.endDate = "La fecha de fin debe ser posterior a la de inicio"
-    }
+    if (!dateRange?.from) newErrors.dates = "Seleccione fecha de inicio"
+    else if (!dateRange?.to) newErrors.dates = "Seleccione fecha de fin"
     if (passengers.some((age) => age < 0 || age > 120)) {
       newErrors.passengers = "Las edades deben estar entre 0 y 120"
     }
@@ -107,24 +129,14 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (validate() && startDate && endDate) {
-      // Convertir fechas a formato YYYY-MM-DD
-      const desde = formatDate(startDate)
-      const hasta = formatDate(endDate)
-      
-      // Convertir edades a array de strings
-      const edades = passengers.map((age) => String(age))
-      
-      // Origen siempre es AR (Argentina)
-      const origen = "AR"
-      
+    if (validate() && dateRange?.from && dateRange?.to) {
       onSubmit({
         destino,
         tipoViaje,
-        desde,
-        hasta,
-        edades,
-        origen,
+        desde: formatDate(dateRange.from),
+        hasta: formatDate(dateRange.to),
+        edades: passengers.map((age) => String(age)),
+        origen: "AR",
       })
     }
   }
@@ -144,7 +156,7 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
             <div className="flex flex-col gap-2">
               <Label htmlFor="destino" className="text-foreground">Destino</Label>
               <Select value={destino} onValueChange={setDestino}>
-                <SelectTrigger id="destino" className="bg-background">
+                <SelectTrigger id="destino" className="bg-background cursor-pointer">
                   <SelectValue placeholder="Seleccione destino" />
                 </SelectTrigger>
                 <SelectContent>
@@ -162,7 +174,7 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
             <div className="flex flex-col gap-2">
               <Label htmlFor="tipoViaje" className="text-foreground">Tipo de viaje</Label>
               <Select value={tipoViaje} onValueChange={setTipoViaje}>
-                <SelectTrigger id="tipoViaje" className="bg-background">
+                <SelectTrigger id="tipoViaje" className="bg-background cursor-pointer">
                   <SelectValue placeholder="Seleccione tipo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -179,66 +191,98 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
             </div>
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="flex flex-col gap-2">
-              <Label className="text-foreground">Fecha de inicio</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start bg-transparent text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP", { locale: es }) : "Seleccione fecha"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+          {/* Date Range Picker */}
+          <div className="flex flex-col gap-2">
+            <Label className="text-foreground">Fechas del viaje</Label>
+            <Popover open={calendarOpen} onOpenChange={handleOpenCalendar}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start bg-background text-left font-normal transition-colors hover:bg-accent hover:text-accent-foreground hover:border-input/80",
+                    !dateRange?.from && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                  {dateRange?.from && dateRange?.to ? (
+                    <span>
+                      {format(dateRange.from, "d MMM yyyy", { locale: es })}
+                      <span className="mx-2 text-muted-foreground">→</span>
+                      {format(dateRange.to, "d MMM yyyy", { locale: es })}
+                    </span>
+                  ) : (
+                    "Seleccione fechas del viaje"
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start" sideOffset={4}>
+                {/* Calendario */}
+                <div className="p-3">
                   <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    disabled={(date) => date < new Date()}
+                    mode="range"
+                    numberOfMonths={2}
+                    selected={tempRange}
+                    onSelect={setTempRange}
+                    disabled={(date) => {
+                      const today = startOfDay(new Date())
+                      const compareDate = startOfDay(date instanceof Date ? date : new Date(date))
+                      return isBefore(compareDate, today)
+                    }}
+                    initialFocus
+                    className="p-0"
                   />
-                </PopoverContent>
-              </Popover>
-              {errors.startDate && (
-                <p className="text-xs text-destructive">{errors.startDate}</p>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label className="text-foreground">Fecha de fin</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start bg-transparent text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP", { locale: es }) : "Seleccione fecha"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
-                    disabled={(date) =>
-                      date < (startDate || new Date())
-                    }
-                  />
-                </PopoverContent>
-              </Popover>
-              {errors.endDate && (
-                <p className="text-xs text-destructive">{errors.endDate}</p>
-              )}
-            </div>
+                </div>
+
+                {/* Barra de info DESDE → HASTA */}
+                <div className="border-t px-5 py-3 text-sm text-center text-foreground">
+                  <span className="font-bold tracking-wide">DESDE:</span>{" "}
+                  <span className="font-semibold">
+                    {tempRange?.from
+                      ? format(tempRange.from, "d MMM yyyy", { locale: es })
+                      : "—"}
+                  </span>
+                  <ArrowRight className="inline mx-3 h-4 w-4 text-muted-foreground" />
+                  <span className="font-bold tracking-wide">HASTA:</span>{" "}
+                  <span className="font-semibold">
+                    {tempRange?.to
+                      ? format(tempRange.to, "d MMM yyyy", { locale: es })
+                      : "—"}
+                  </span>
+                </div>
+
+                {/* Footer con total y acciones */}
+                <div className="border-t px-5 py-3 flex items-center justify-between">
+                  <span className="text-sm text-foreground">
+                    Total:{" "}
+                    <strong>
+                      {totalDays != null ? `${totalDays} día${totalDays !== 1 ? "s" : ""}.` : "—"}
+                    </strong>
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleClear}
+                      className="text-sm underline text-foreground hover:text-muted-foreground transition-colors"
+                    >
+                      Borrar
+                    </button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full px-5"
+                      onClick={handleApply}
+                      disabled={!tempRange?.from || !tempRange?.to}
+                    >
+                      Aplicar
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            {errors.dates && (
+              <p className="text-xs text-destructive">{errors.dates}</p>
+            )}
           </div>
 
           {/* Passengers */}
@@ -266,7 +310,7 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
                     max={120}
                     value={age}
                     onChange={(e) => updatePassengerAge(index, e.target.value)}
-                    className="bg-background"
+                    className="bg-background cursor-text"
                     aria-label={`Edad pasajero ${index + 1}`}
                   />
                   {passengers.length > 1 && (

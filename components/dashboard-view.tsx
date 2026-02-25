@@ -7,11 +7,15 @@ import { DashboardHeader } from "@/components/dashboard-header"
 import { QuotationForm, type QuotationData } from "@/components/quotation-form"
 import { QuotationResults, QuotationResultsSkeleton } from "@/components/quotation-results"
 import { SettingsView } from "@/components/settings-view"
+import { AdminUsersAgencies } from "@/components/admin-users-agencies"
+import { AdminCreateAgency } from "@/components/admin-create-agency"
+import { AdminCreateUser } from "@/components/admin-create-user"
+import { AdminManagement } from "@/components/admin-management"
 import { useAuth } from "@/lib/auth-context"
 import { apiClient } from "@/lib/api"
 import { toast } from "sonner"
 
-type ViewState = "form" | "loading" | "results" | "settings"
+type ViewState = "form" | "loading" | "results" | "settings" | "admin-users-agencies" | "admin-create-agency" | "admin-create-user" | "admin-management"
 
 export function DashboardView() {
   const { loginResponse } = useAuth()
@@ -74,11 +78,31 @@ export function DashboardView() {
     setView("settings")
   }
 
+  const handleNavigateToAdminUsersAgencies = () => {
+    setView("admin-users-agencies")
+  }
+
+  const handleNavigateToAdminCreateAgency = () => {
+    setView("admin-create-agency")
+  }
+
+  const handleNavigateToAdminCreateUser = () => {
+    setView("admin-create-user")
+  }
+
+  const handleNavigateToAdminManagement = () => {
+    setView("admin-management")
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar 
         onNavigateToForm={handleNavigateToForm}
         onNavigateToSettings={handleNavigateToSettings}
+        onNavigateToAdminUsersAgencies={handleNavigateToAdminUsersAgencies}
+        onNavigateToAdminCreateAgency={handleNavigateToAdminCreateAgency}
+        onNavigateToAdminCreateUser={handleNavigateToAdminCreateUser}
+        onNavigateToAdminManagement={handleNavigateToAdminManagement}
         currentView={view}
       />
       <SidebarInset>
@@ -96,6 +120,10 @@ export function DashboardView() {
             />
           )}
           {view === "settings" && <SettingsView />}
+          {view === "admin-users-agencies" && <AdminUsersAgencies />}
+          {view === "admin-create-agency" && <AdminCreateAgency />}
+          {view === "admin-create-user" && <AdminCreateUser />}
+          {view === "admin-management" && <AdminManagement />}
         </div>
       </SidebarInset>
     </SidebarProvider>

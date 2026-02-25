@@ -5,16 +5,19 @@ import { apiClient } from "./api"
 
 type User = {
   id: number
-  nombre: string
   email: string
-  userName: string
-  role: number
-  agenciaId: number
+  role: string
+  agency_id: number | null
+  // Campos opcionales que pueden venir del backend
+  nombre?: string
+  userName?: string
   telefono?: string
   nacionalidad?: string
   comision?: string
   metodoPago?: string
   foto?: string | null
+  // Alias para compatibilidad
+  agenciaId?: number | null
 }
 
 type AuthContextType = {
@@ -65,21 +68,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const login = useCallback(async (userName: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
-      const { data } = await apiClient.post("/users/login", {
-        userName,
+      const { data } = await apiClient.post("/v1/auth/login", {
+        email,
         password,
       })
+      
+      // Log completo de la respuesta para debugging
+      console.log("=== Respuesta completa del backend ===")
+      console.log("Data completa:", data)
+      console.log("=====================================")
       
       // Guardar la respuesta completa del backend
       setLoginResponse(data)
       
-      // Extraer token de la respuesta
-      const authToken = data.token
+      // El backend devuelve access_token
+      const authToken = data?.access_token
       
       if (!authToken) {
-        throw new Error("El backend no devolvió un token en la respuesta")
+        console.error("No se encontró access_token en la respuesta")
+        console.error("Estructura completa de la respuesta:", JSON.stringify(data, null, 2))
+        return false
       }
       
       // Guardar token en localStorage y estado
@@ -95,18 +105,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Extraer y guardar datos del usuario de la respuesta
-      // La estructura del backend es: data.user contiene los datos del usuario
+      // El backend devuelve: { access_token, token_type, user: { id, email, role, agency_id } }
       if (!data.user) {
-        throw new Error("El backend no devolvió datos del usuario")
+        console.error("El backend no devolvió datos del usuario")
+        console.error("Estructura completa de la respuesta:", JSON.stringify(data, null, 2))
+        return false
       }
       
+      // Mapear los datos del usuario según la estructura del backend
       const userData: User = {
         id: data.user.id,
-        nombre: data.user.nombre,
         email: data.user.email,
-        userName: data.user.userName,
         role: data.user.role,
-        agenciaId: data.user.agenciaId,
+        agency_id: data.user.agency_id,
+        // Alias para compatibilidad con código existente
+        agenciaId: data.user.agency_id,
+        // Campos opcionales que pueden venir del backend
+        nombre: data.user.nombre,
+        userName: data.user.userName,
         telefono: data.user.telefono,
         nacionalidad: data.user.nacionalidad,
         comision: data.user.comision,
@@ -138,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Si hay usuario y token, hacer logout en el backend
       if (currentUser?.id && currentToken) {
         try {
-          await apiClient.put(`/users/logout?userId=${currentUser.id}`)
+          await apiClient.put(`/v1/auth/logout?userId=${currentUser.id}`)
         } catch (error: any) {
           // Si falla el logout en el backend, igualmente limpiar la sesión local
           console.error("Error al hacer logout en el backend:", error)

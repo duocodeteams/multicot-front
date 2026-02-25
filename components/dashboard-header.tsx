@@ -59,6 +59,11 @@ export function DashboardHeader() {
                       .map((n) => n[0])
                       .join("")
                       .slice(0, 2)
+                  : user?.email
+                  ? user.email
+                      .split("@")[0]
+                      .slice(0, 2)
+                      .toUpperCase()
                   : "U"}
               </AvatarFallback>
             </Avatar>
@@ -73,7 +78,7 @@ export function DashboardHeader() {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col gap-1">
-              <p className="text-sm font-medium text-foreground">{user?.nombre || "Usuario"}</p>
+              <p className="text-sm font-medium text-foreground">{user?.nombre || user?.email || "Usuario"}</p>
               <p className="text-xs text-muted-foreground">{user?.email || "Sin email"}</p>
               <p className="text-xs text-muted-foreground">
                 {user?.role !== undefined ? `${t("role")}: ${user.role}` : "Sin rol"}
