@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { LayoutDashboard, Settings, HelpCircle, Users, Building2, UserPlus, Shield, LogOut } from "lucide-react"
 import {
   Sidebar,
@@ -13,15 +14,21 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 import { useLanguage } from "@/lib/language-context"
 import { toast } from "sonner"
-
-const secondaryNav = [
-  { title: "Configuracion", icon: Settings },
-  { title: "Ayuda", icon: HelpCircle },
-]
 
 type AppSidebarProps = {
   onNavigateToForm?: () => void
@@ -30,7 +37,6 @@ type AppSidebarProps = {
   onNavigateToAdminCreateAgency?: () => void
   onNavigateToAdminCreateUser?: () => void
   onNavigateToAdminManagement?: () => void
-  onNavigateToLogout?: () => void
   currentView?: string
 }
 
@@ -41,49 +47,31 @@ export function AppSidebar({
   onNavigateToAdminCreateAgency,
   onNavigateToAdminCreateUser,
   onNavigateToAdminManagement,
-  onNavigateToLogout,
   currentView = "form"
 }: AppSidebarProps) {
   const { user, logout } = useAuth()
   const { t } = useLanguage()
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
 
-  // Verificar si el usuario es admin (role === "admin")
   const isAdmin = user?.role === "admin" || user?.role === 1
+  const supportPhone = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? ""
 
-  const handleDashboardClick = () => {
-    if (onNavigateToForm) {
-      onNavigateToForm()
+  const getInitials = () => {
+    if (user?.nombre) {
+      return user.nombre.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()
     }
+    if (user?.email) {
+      return user.email.split("@")[0].slice(0, 2).toUpperCase()
+    }
+    return "U"
   }
 
-  const handleSettingsClick = () => {
-    if (onNavigateToSettings) {
-      onNavigateToSettings()
-    }
-  }
-
-  const handleAdminUsersAgenciesClick = () => {
-    if (onNavigateToAdminUsersAgencies) {
-      onNavigateToAdminUsersAgencies()
-    }
-  }
-
-  const handleAdminCreateAgencyClick = () => {
-    if (onNavigateToAdminCreateAgency) {
-      onNavigateToAdminCreateAgency()
-    }
-  }
-
-  const handleAdminCreateUserClick = () => {
-    if (onNavigateToAdminCreateUser) {
-      onNavigateToAdminCreateUser()
-    }
-  }
-
-  const handleAdminManagementClick = () => {
-    if (onNavigateToAdminManagement) {
-      onNavigateToAdminManagement()
-    }
+  const getRoleLabel = () => {
+    const role = user?.role
+    if (role === "admin" || role === 1) return "Admin"
+    if (role === "agency" || role === 2) return "Agencia"
+    if (role === "seller" || role === 3) return "Vendedor"
+    return "Usuario"
   }
 
   const handleLogout = () => {
@@ -91,61 +79,62 @@ export function AppSidebar({
     toast.success("Sesión cerrada correctamente")
   }
 
-  const handleLogoutClick = () => {
-    if (onNavigateToLogout) {
-      onNavigateToLogout()
-    }
+  const handleOpenSupportWhatsApp = () => {
+    const supportMessage = "Hola, necesito soporte con la plataforma."
+    const cleanPhone = supportPhone.replace(/\D/g, "")
+    const text = encodeURIComponent(supportMessage)
+    const url = cleanPhone
+      ? `https://wa.me/${cleanPhone}?text=${text}`
+      : `https://wa.me/?text=${text}`
+
+    window.open(url, "_blank", "noopener,noreferrer")
+    setIsSupportModalOpen(false)
   }
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="h-14 px-4 flex justify-center">
-        <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg overflow-hidden shrink-0">
-            <img
-              src="/biantlogo.jpg"
-              alt="Biant"
-              className="h-full w-full object-contain"
-            />
-          </div>
-          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-semibold text-sidebar-foreground">
-              Biant Seguros
-            </span>
-            {user?.agenciaId && (
-              <span className="text-xs text-sidebar-foreground/60">
-                #{user.agenciaId}
-              </span>
-            )}
-          </div>
+
+      {/* ── Header: toggle de colapso ── */}
+      <SidebarHeader className="h-24 flex items-center justify-center border-b border-sidebar-border/40 px-2">
+        <div className="w-full flex items-center justify-center">
+          <SidebarTrigger className="h-8 w-8 mx-auto text-sidebar-white hover:text-sidebar-foreground hover:bg-sidebar-accent/60 rounded-lg" />
         </div>
       </SidebarHeader>
-      <SidebarSeparator />
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-white">
-            -Principal-
+
+      {/* ── Contenido ── */}
+      <SidebarContent className="py-3 gap-0">
+
+        {/* Principal */}
+        <SidebarGroup className="px-2">
+          <SidebarGroupLabel className="text-[10px] font-semibold text-sidebar-white uppercase tracking-widest mb-1">
+            Principal
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={currentView === "form" || currentView === "loading" || currentView === "results"}
-                  tooltip="Dashboard"
-                  onClick={handleDashboardClick}
+                  isActive={
+                    currentView === "form" ||
+                    currentView === "loading" ||
+                    currentView === "results"
+                  }
+                  tooltip="Cotizador"
+                  onClick={onNavigateToForm}
                 >
                   <LayoutDashboard className="h-4 w-4" />
-                  <span className="group-data-[collapsible=icon]:hidden">{t("dashboard")}</span>
+                  <span>{t("dashboard")}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Admin */}
         {isAdmin && (
           <>
-            <SidebarSeparator />
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-sidebar-foreground/50">
+            <SidebarSeparator className="mx-2 my-2 bg-sidebar-border/40" />
+            <SidebarGroup className="px-2">
+              <SidebarGroupLabel className="text-[10px] font-semibold text-sidebar-foreground/35 uppercase tracking-widest mb-1">
                 Administración
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -154,40 +143,40 @@ export function AppSidebar({
                     <SidebarMenuButton
                       isActive={currentView === "admin-users-agencies"}
                       tooltip="Usuarios y Agencias"
-                      onClick={handleAdminUsersAgenciesClick}
+                      onClick={onNavigateToAdminUsersAgencies}
                     >
                       <Users className="h-4 w-4" />
-                      <span className="group-data-[collapsible=icon]:hidden">Usuarios y Agencias</span>
+                      <span>Usuarios y Agencias</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       isActive={currentView === "admin-create-agency"}
                       tooltip="Crear Agencia"
-                      onClick={handleAdminCreateAgencyClick}
+                      onClick={onNavigateToAdminCreateAgency}
                     >
                       <Building2 className="h-4 w-4" />
-                      <span className="group-data-[collapsible=icon]:hidden">Crear Agencia</span>
+                      <span>Crear Agencia</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       isActive={currentView === "admin-create-user"}
-                      tooltip="Crear Usuario"
-                      onClick={handleAdminCreateUserClick}
+                      tooltip="Crear Vendedor"
+                      onClick={onNavigateToAdminCreateUser}
                     >
                       <UserPlus className="h-4 w-4" />
-                      <span className="group-data-[collapsible=icon]:hidden">Crear Usuario</span>
+                      <span>Crear Vendedor</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       isActive={currentView === "admin-management"}
-                      tooltip="Gestiones de Admin"
-                      onClick={handleAdminManagementClick}
+                      tooltip="Gestión Admin"
+                      onClick={onNavigateToAdminManagement}
                     >
                       <Shield className="h-4 w-4" />
-                      <span className="group-data-[collapsible=icon]:hidden">Gestiones de Admin</span>
+                      <span>Gestión Admin</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
@@ -195,10 +184,12 @@ export function AppSidebar({
             </SidebarGroup>
           </>
         )}
-        <SidebarSeparator />
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-white">
-            -General-
+
+        {/* General */}
+        <SidebarSeparator className="mx-2 my-2 bg-sidebar-border/40" />
+        <SidebarGroup className="px-2">
+          <SidebarGroupLabel className="text-[10px] font-semibold text-sidebar-white uppercase tracking-widest mb-1">
+            General
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -206,32 +197,82 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={currentView === "settings"}
                   tooltip={t("settings")}
-                  onClick={handleSettingsClick}
+                  onClick={onNavigateToSettings}
                 >
                   <Settings className="h-4 w-4" />
-                  <span className="group-data-[collapsible=icon]:hidden">{t("settings")}</span>
+                  <span>{t("settings")}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton tooltip={t("help")}>
+                <SidebarMenuButton
+                  tooltip={t("help")}
+                  onClick={() => setIsSupportModalOpen(true)}
+                >
                   <HelpCircle className="h-4 w-4" />
-                  <span className="group-data-[collapsible=icon]:hidden">{t("help")}</span>
+                  <span>{t("help")}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
       </SidebarContent>
-      <SidebarFooter className="p-4">
+
+      {/* ── Footer: usuario + logout ── */}
+      <SidebarFooter className="border-t border-sidebar-border/40 p-3 gap-1">
+
+        {/* Tarjeta de usuario */}
+        <div className="flex items-center gap-2.5 rounded-lg px-2 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+          <Avatar className="h-8 w-8 shrink-0 ring-2 ring-sidebar-foreground/15 shadow-sm">
+            <AvatarFallback className="bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold">
+              {getInitials()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+            <span className="text-xs font-semibold text-sidebar-foreground truncate leading-tight">
+              {user?.nombre || user?.email?.split("@")[0] || "Usuario"}
+            </span>
+            <span className="text-[11px] text-sidebar-foreground/45 truncate leading-tight">
+              {user?.email || "Sin email"}
+            </span>
+          </div>
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-sidebar-primary/40 text-sidebar-foreground/80 shrink-0 group-data-[collapsible=icon]:hidden">
+            {getRoleLabel()}
+          </span>
+        </div>
+
+        {/* Botón logout */}
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton isActive={currentView === "logout"} tooltip="Cerrar sesión" onClick={handleLogout}>
+            <SidebarMenuButton
+              tooltip="Cerrar sesión"
+              onClick={handleLogout}
+              className="text-sidebar-white hover:!text-red-300 hover:!bg-red-500/15 transition-colors"
+            >
               <LogOut className="h-4 w-4" />
-              <span className="group-data-[collapsible=icon]:hidden">Cerrar sesión</span>
+              <span>Cerrar sesión</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+
       </SidebarFooter>
+
+      <Dialog open={isSupportModalOpen} onOpenChange={setIsSupportModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Centro de soporte</DialogTitle>
+            <DialogDescription>
+              Si necesitás ayuda con la plataforma, contactanos por WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setIsSupportModalOpen(false)}>
+              Cerrar
+            </Button>
+            <Button onClick={handleOpenSupportWhatsApp}>Contactar soporte por WhatsApp</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sidebar>
-  );
+  )
 }

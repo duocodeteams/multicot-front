@@ -1,0 +1,422 @@
+# API Endpoints - Documentación para Frontend
+
+Base URL: `http://localhost:8000`
+
+## Autenticación
+
+Todos los endpoints (excepto `/v1/auth/login` y `/health`) requieren autenticación mediante Bearer Token en el header:
+```
+Authorization: Bearer <access_token>
+```
+
+---
+
+## Endpoints Públicos
+
+### Health Check
+- **GET** `/health`
+- **Descripción**: Verifica el estado del servidor
+- **Autenticación**: No requerida
+- **Respuesta**:
+```json
+{
+  "status": "ok"
+}
+```
+
+---
+
+## Autenticación (`/v1/auth`)
+
+### Login
+- **POST** `/v1/auth/login`
+- **Descripción**: Inicia sesión y obtiene un token de acceso
+- **Autenticación**: No requerida
+- **Body**:
+```json
+{
+  "email": "usuario@ejemplo.com",
+  "password": "contraseña123"
+}
+```
+- **Respuesta** (200):
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "email": "usuario@ejemplo.com",
+    "role": "admin",  // "admin" | "agency" | "seller"
+    "agency_id": null  // null para admin, número para agency
+  }
+}
+```
+- **Errores**:
+  - `401`: Email o contraseña incorrectos
+
+---
+
+## Cotizaciones (`/v1/quotes`)
+
+### Crear Cotización
+- **POST** `/v1/quotes`
+- **Descripción**: Obtiene cotizaciones de todas las compañías disponibles (Pax, Cardinal, Terrawind, New Travel, Inter Assist)
+- **Autenticación**: Requerida (cualquier rol)
+- **Body**:
+```json
+{
+  "departure_date": "2024-06-01",  // Fecha ida (YYYY-MM-DD)
+  "return_date": "2024-06-15",      // Fecha vuelta (YYYY-MM-DD)
+  "ages": [30, 28],                 // Array de edades de los pasajeros (mínimo 1)
+  "origin": "AR",                    // Origen (ej: "AR" para Argentina)
+  "destination_id": 1,              // ID destino: 1=Nacional, 2=Latinoamérica, 3=Europa, 4=Resto del mundo, 5=Norteamérica
+  "trip_type": "unico_viaje"        // "unico_viaje" | "multiviaje" | "larga_estadia"
+}
+```
+
+**Tipos de viaje válidos:**
+- `"unico_viaje"`: Viaje único
+- `"multiviaje"`: Multiviaje (anual)
+- `"larga_estadia"`: Larga estadía
+
+**IDs de destino válidos:**
+- `1`: Nacional
+- `2`: Latinoamérica
+- `3`: Europa
+- `4`: Resto del mundo
+- `5`: Norteamérica
+
+- **Respuesta** (200):
+```json
+{
+  "plans": [
+    {
+      "company": "Cardinal",
+      "id": "guid-cotizacion|123",
+      "plan_id": "123",
+      "plan_name": "CARDINAL 100",
+      "coverage_amount": 50000.00,
+      "benefits": [
+        {
+          "id": 1,
+          "nombre": "Tope Máximo Global",
+          "valor": "USS 50.000"
+        }
+      ],
+      "net_rate": 25.50,
+      "final_rate_usd": 51.00,
+      "exchange_rate": 1.00,
+      "final_rate": 51.00
+    }
+  ]
+}
+```
+
+---
+
+## Agencias (`/v1/agencies`)
+
+**Nota**: Todos los endpoints de agencias requieren rol `ADMIN`.
+
+### Crear Agencia
+- **POST** `/v1/agencies`
+- **Descripción**: Crea una nueva agencia con su usuario principal
+- **Autenticación**: Requerida (ADMIN)
+- **Body**:
+```json
+{
+  "name": "Agencia Ejemplo",
+  "legal_name": "Agencia Ejemplo S.A.",
+  "tax_id": "20-12345678-9",
+  "address": "Calle Falsa 123",
+  "country": "AR",  // Código ISO 3166-1 alpha-2 (2 caracteres)
+  "legal_representative_name": "Juan Pérez",
+  "agency_email": "agencia@ejemplo.com",
+  "administration_email": "admin@ejemplo.com",  // Opcional
+  "office_phone": "+54 11 1234-5678",
+  "contact_name": "María García",  // Opcional
+  "contact_email": "contacto@ejemplo.com",  // Opcional
+  "contact_phone": "+54 11 9876-5432",  // Opcional
+  "activation_date": "2024-01-01",  // YYYY-MM-DD
+  "commission": 15.50,  // Opcional (Decimal)
+  "billing_frequency": "monthly",  // "monthly" | "quarterly" | "yearly"
+  "payment_method": "transfer",  // "transfer" | "credit_card" | "debit" | "check"
+  "tax_condition": "responsable_inscripto",  // "responsable_inscripto" | "monotributo" | "exento" | "consumidor_final"
+  "bank_account": "1234567890",  // Opcional
+  "ssn_register": "ABC123",  // Opcional
+  "user": {
+    "email": "usuario@agencia.com",
+    "password": "contraseña123"  // Mínimo 8 caracteres
+  }
+}
+```
+
+**Valores válidos para `billing_frequency`:**
+- `"monthly"`: Mensual
+- `"quarterly"`: Trimestral
+- `"yearly"`: Anual
+
+**Valores válidos para `payment_method`:**
+- `"transfer"`: Transferencia
+- `"credit_card"`: Tarjeta de crédito
+- `"debit"`: Débito
+- `"check"`: Cheque
+
+**Valores válidos para `tax_condition`:**
+- `"responsable_inscripto"`: Responsable Inscripto
+- `"monotributo"`: Monotributo
+- `"exento"`: Exento
+- `"consumidor_final"`: Consumidor Final
+
+- **Respuesta** (201):
+```json
+{
+  "id": 1,
+  "name": "Agencia Ejemplo",
+  "legal_name": "Agencia Ejemplo S.A.",
+  "tax_id": "20-12345678-9",
+  "address": "Calle Falsa 123",
+  "country": "AR",
+  "legal_representative_name": "Juan Pérez",
+  "agency_email": "agencia@ejemplo.com",
+  "administration_email": "admin@ejemplo.com",
+  "office_phone": "+54 11 1234-5678",
+  "contact_name": "María García",
+  "contact_email": "contacto@ejemplo.com",
+  "contact_phone": "+54 11 9876-5432",
+  "activation_date": "2024-01-01",
+  "commission": 15.50,
+  "billing_frequency": "monthly",
+  "payment_method": "transfer",
+  "tax_condition": "responsable_inscripto",
+  "bank_account": "1234567890",
+  "ssn_register": "ABC123",
+  "user": {
+    "id": 2,
+    "email": "usuario@agencia.com",
+    "role": "agency"
+  }
+}
+```
+
+### Listar Agencias
+- **GET** `/v1/agencies`
+- **Descripción**: Lista agencias activas con paginación
+- **Autenticación**: Requerida (ADMIN)
+- **Query Parameters**:
+  - `limit` (opcional): Número de resultados por página (1-100, default: 50)
+  - `offset` (opcional): Número de resultados a saltar (default: 0)
+- **Ejemplo**: `/v1/agencies?limit=20&offset=0`
+- **Respuesta** (200):
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "name": "Agencia Ejemplo",
+      // ... todos los campos de AgencyResponse
+    }
+  ],
+  "total": 10,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+### Obtener Agencia por ID
+- **GET** `/v1/agencies/{agency_id}`
+- **Descripción**: Obtiene una agencia específica por su ID
+- **Autenticación**: Requerida (ADMIN)
+- **Path Parameters**:
+  - `agency_id`: ID de la agencia (integer)
+- **Respuesta** (200): Mismo formato que crear agencia
+- **Errores**:
+  - `404`: Agencia no encontrada
+
+### Actualizar Agencia
+- **PATCH** `/v1/agencies/{agency_id}`
+- **Descripción**: Actualiza campos de una agencia (todos los campos son opcionales)
+- **Autenticación**: Requerida (ADMIN)
+- **Path Parameters**:
+  - `agency_id`: ID de la agencia (integer)
+- **Body**: Cualquier campo de `AgencyCreate` (todos opcionales)
+```json
+{
+  "name": "Nuevo Nombre",  // Opcional
+  "commission": 20.00,  // Opcional
+  // ... cualquier otro campo opcional
+}
+```
+- **Respuesta** (200): Mismo formato que crear agencia
+- **Errores**:
+  - `404`: Agencia no encontrada
+
+### Eliminar Agencia
+- **DELETE** `/v1/agencies/{agency_id}`
+- **Descripción**: Borrado lógico (desactiva la agencia y usuarios/vendedores asociados)
+- **Autenticación**: Requerida (ADMIN)
+- **Path Parameters**:
+  - `agency_id`: ID de la agencia (integer)
+- **Respuesta**: 204 No Content
+- **Errores**:
+  - `404`: Agencia no encontrada
+
+---
+
+## Vendedores (`/v1/sellers`)
+
+**Nota**: 
+- Los endpoints requieren rol `ADMIN` o `AGENCY`
+- `ADMIN`: Puede ver/crear/editar todos los vendedores
+- `AGENCY`: Solo puede ver/crear/editar vendedores de su propia agencia
+
+### Crear Vendedor
+- **POST** `/v1/sellers`
+- **Descripción**: Crea un nuevo vendedor con su usuario de login
+- **Autenticación**: Requerida (ADMIN o AGENCY)
+- **Body**:
+```json
+{
+  "first_name": "Juan",
+  "last_name": "Pérez",
+  "address": "Calle 123",
+  "nationality": "Argentina",
+  "birth_date": "1990-01-15",  // YYYY-MM-DD
+  "comments": "Comentarios opcionales",  // Opcional, default: ""
+  "commission": 10.00,  // Opcional, default: 0 (Decimal)
+  "agency_id": 1,  // Opcional, solo ADMIN puede especificar; null = independiente
+  "user": {
+    "email": "vendedor@ejemplo.com",
+    "password": "contraseña123"  // Mínimo 8 caracteres
+  }
+}
+```
+
+**Nota**: Si el usuario es `AGENCY`, el `agency_id` se asigna automáticamente a su agencia (ignora el valor enviado).
+
+- **Respuesta** (201):
+```json
+{
+  "id": 1,
+  "user_id": 3,
+  "agency_id": 1,
+  "first_name": "Juan",
+  "last_name": "Pérez",
+  "address": "Calle 123",
+  "nationality": "Argentina",
+  "birth_date": "1990-01-15",
+  "comments": "Comentarios opcionales",
+  "commission": 10.00,
+  "user": {
+    "id": 3,
+    "email": "vendedor@ejemplo.com",
+    "role": "seller"
+  }
+}
+```
+
+### Listar Vendedores
+- **GET** `/v1/sellers`
+- **Descripción**: Lista vendedores con paginación y filtros
+- **Autenticación**: Requerida (ADMIN o AGENCY)
+- **Query Parameters**:
+  - `limit` (opcional): Número de resultados por página (1-100, default: 50)
+  - `offset` (opcional): Número de resultados a saltar (default: 0)
+  - `active` (opcional): `true` = solo activos, `false` = todos, `null` = solo activos (default)
+  - `agency_id` (opcional): Filtrar por agencia (solo ADMIN puede usar este filtro)
+- **Ejemplo**: `/v1/sellers?limit=20&offset=0&active=true&agency_id=1`
+- **Respuesta** (200):
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "user_id": 3,
+      "agency_id": 1,
+      "first_name": "Juan",
+      // ... todos los campos de SellerResponse
+    }
+  ],
+  "total": 5,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+### Obtener Vendedor por ID
+- **GET** `/v1/sellers/{seller_id}`
+- **Descripción**: Obtiene un vendedor específico por su ID
+- **Autenticación**: Requerida (ADMIN o AGENCY)
+- **Path Parameters**:
+  - `seller_id`: ID del vendedor (integer)
+- **Respuesta** (200): Mismo formato que crear vendedor
+- **Errores**:
+  - `404`: Vendedor no encontrado
+  - `403`: Si eres AGENCY y el vendedor no pertenece a tu agencia
+
+### Actualizar Vendedor
+- **PATCH** `/v1/sellers/{seller_id}`
+- **Descripción**: Actualiza campos de un vendedor (todos los campos son opcionales, excepto `agency_id` que no se puede modificar)
+- **Autenticación**: Requerida (ADMIN o AGENCY)
+- **Path Parameters**:
+  - `seller_id`: ID del vendedor (integer)
+- **Body**: Cualquier campo de `SellerCreate` excepto `agency_id` y `user` (todos opcionales)
+```json
+{
+  "first_name": "Nuevo Nombre",  // Opcional
+  "commission": 15.00,  // Opcional
+  // ... cualquier otro campo opcional
+}
+```
+- **Respuesta** (200): Mismo formato que crear vendedor
+- **Errores**:
+  - `404`: Vendedor no encontrado
+  - `403`: Si eres AGENCY y el vendedor no pertenece a tu agencia
+
+### Eliminar Vendedor
+- **DELETE** `/v1/sellers/{seller_id}`
+- **Descripción**: Borrado lógico (desactiva el vendedor y su usuario)
+- **Autenticación**: Requerida (ADMIN o AGENCY)
+- **Path Parameters**:
+  - `seller_id`: ID del vendedor (integer)
+- **Respuesta**: 204 No Content
+- **Errores**:
+  - `404`: Vendedor no encontrado
+  - `403`: Si eres AGENCY y el vendedor no pertenece a tu agencia
+
+---
+
+## Códigos de Estado HTTP
+
+- `200`: OK - Operación exitosa
+- `201`: Created - Recurso creado exitosamente
+- `204`: No Content - Operación exitosa sin contenido de respuesta
+- `400`: Bad Request - Error en los datos enviados
+- `401`: Unauthorized - No autenticado o token inválido
+- `403`: Forbidden - No tienes permisos para esta operación
+- `404`: Not Found - Recurso no encontrado
+- `422`: Unprocessable Entity - Error de validación de datos
+
+---
+
+## Notas Importantes
+
+1. **Autenticación**: Guarda el `access_token` recibido en el login y úsalo en todas las peticiones posteriores (excepto `/health` y `/v1/auth/login`).
+
+2. **Roles y Permisos**:
+   - `ADMIN`: Acceso completo a todas las funcionalidades
+   - `AGENCY`: Solo puede gestionar sus propios vendedores y ver su información
+   - `SELLER`: Solo puede crear cotizaciones
+
+3. **Formato de Fechas**: Todas las fechas deben estar en formato ISO 8601: `YYYY-MM-DD`
+
+4. **Paginación**: Los endpoints de listado usan `limit` y `offset` para paginación. El `total` en la respuesta indica el número total de registros disponibles.
+
+5. **Borrado Lógico**: Los endpoints DELETE no eliminan físicamente los registros, solo los marcan como inactivos.
+
+6. **Validaciones**:
+   - Las contraseñas deben tener mínimo 8 caracteres
+   - El `country` debe ser un código ISO 3166-1 alpha-2 (2 caracteres)
+   - La fecha de vuelta debe ser posterior a la fecha de ida en las cotizaciones
+   - El array de `ages` debe tener al menos un elemento

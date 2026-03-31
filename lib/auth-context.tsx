@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
-import { apiClient } from "./api"
+import { login as loginService } from "./services"
 
 type User = {
   id: number
@@ -70,10 +70,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
-      const { data } = await apiClient.post("/v1/auth/login", {
-        email,
-        password,
-      })
+      // Usar el servicio de login
+      const data = await loginService({ email, password })
       
       // Log completo de la respuesta para debugging
       console.log("=== Respuesta completa del backend ===")
@@ -98,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(authToken)
         
         // Si hay refresh token, también guardarlo
-        const refreshToken = data.refreshToken || data.refresh_token
+        const refreshToken = (data as any).refreshToken || (data as any).refresh_token
         if (refreshToken) {
           localStorage.setItem(AUTH_REFRESH_TOKEN_KEY, refreshToken)
         }
@@ -121,13 +119,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Alias para compatibilidad con código existente
         agenciaId: data.user.agency_id,
         // Campos opcionales que pueden venir del backend
-        nombre: data.user.nombre,
-        userName: data.user.userName,
-        telefono: data.user.telefono,
-        nacionalidad: data.user.nacionalidad,
-        comision: data.user.comision,
-        metodoPago: data.user.metodoPago,
-        foto: data.user.foto,
+        nombre: (data.user as any).nombre,
+        userName: (data.user as any).userName,
+        telefono: (data.user as any).telefono,
+        nacionalidad: (data.user as any).nacionalidad,
+        comision: (data.user as any).comision,
+        metodoPago: (data.user as any).metodoPago,
+        foto: (data.user as any).foto,
       }
       
       setUser(userData)

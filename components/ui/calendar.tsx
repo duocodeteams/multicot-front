@@ -26,11 +26,11 @@ function Calendar({
       className={cn('p-3', className)}
       classNames={{
         // v9 classNames
-        root: 'w-full',
+        root: 'w-full relative',
         months: 'flex flex-col sm:flex-row gap-4',
         month: 'space-y-4',
         month_caption: 'flex justify-center pt-1 relative items-center h-7 mb-4',
-        caption_label: 'text-sm font-semibold',
+        caption_label: 'text-sm font-semibold uppercase',
         nav: 'absolute top-3 left-0 right-0 flex justify-between px-2 z-10',
         button_previous: cn(
           buttonVariants({ variant: 'outline' }),
@@ -42,7 +42,7 @@ function Calendar({
         ),
         month_grid: 'w-full border-collapse',
         weekdays: 'flex',
-        weekday: 'text-muted-foreground w-9 font-normal text-[0.8rem] text-center pb-1',
+        weekday: 'text-muted-foreground w-9 font-normal text-[0.8rem] text-center pb-1 uppercase',
         week: 'flex w-full mt-1',
         day: 'relative h-9 w-9 p-0 text-center text-sm focus-within:relative focus-within:z-20',
         day_button: cn(

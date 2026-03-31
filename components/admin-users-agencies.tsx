@@ -15,7 +15,9 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { apiClient } from "@/lib/api"
+import { listAgencies, listSellers } from "@/lib/services"
+import type { AgencyResponse, SellerResponse } from "@/lib/services/types"
+import { useAuth } from "@/lib/auth-context"
 import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -24,8 +26,8 @@ type User = {
   nombre: string
   email: string
   userName: string
-  role: number
-  agenciaId: number
+  role: string
+  agenciaId: number | null
   telefono?: string
   nacionalidad?: string
 }
@@ -39,6 +41,7 @@ type Agency = {
 }
 
 export function AdminUsersAgencies() {
+  const { user } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [agencies, setAgencies] = useState<Agency[]>([])
   const [isLoadingUsers, setIsLoadingUsers] = useState(false)
@@ -49,13 +52,51 @@ export function AdminUsersAgencies() {
   const fetchUsers = async () => {
     setIsLoadingUsers(true)
     try {
-      const { data } = await apiClient.get("/users")
-      setUsers(data || [])
+      // Verificar que el usuario tenga permisos de admin
+      if (user?.role !== "admin") {
+        toast.error("Acceso denegado", {
+          description: "Solo los administradores pueden ver esta información",
+        })
+        setIsLoadingUsers(false)
+        return
+      }
+
+      // Verificar que haya token
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+      if (!token) {
+        toast.error("Sesión expirada", {
+          description: "Por favor, inicia sesión nuevamente",
+        })
+        setIsLoadingUsers(false)
+        return
+      }
+      
+      // Usar listSellers ya que no hay endpoint de usuarios generales
+      const response = await listSellers({ limit: 100, offset: 0 })
+      
+      // Mapear sellers a la estructura de usuarios
+      const mappedUsers: User[] = response.items.map((seller: SellerResponse) => ({
+        id: seller.id,
+        nombre: `${seller.first_name} ${seller.last_name}`,
+        email: seller.user.email,
+        userName: seller.user.email.split("@")[0], // Usar parte del email como username
+        role: seller.user.role,
+        agenciaId: seller.agency_id,
+        telefono: undefined, // No viene en la respuesta
+        nacionalidad: seller.nationality,
+      }))
+      
+      setUsers(mappedUsers)
     } catch (error: any) {
-      console.error("Error al cargar usuarios:", error)
-      toast.error("Error al cargar usuarios", {
-        description: error.message || "No se pudieron cargar los usuarios",
-      })
+      if (error.message?.includes("permisos") || error.message?.includes("403")) {
+        toast.error("Acceso denegado", {
+          description: "No tienes permisos para ver esta información. Se requiere rol de administrador.",
+        })
+      } else {
+        toast.error("Error al cargar vendedores", {
+          description: error.message || "No se pudieron cargar los vendedores",
+        })
+      }
     } finally {
       setIsLoadingUsers(false)
     }
@@ -64,13 +105,47 @@ export function AdminUsersAgencies() {
   const fetchAgencies = async () => {
     setIsLoadingAgencies(true)
     try {
-      const { data } = await apiClient.get("/agencias")
-      setAgencies(data || [])
+      // Verificar que el usuario tenga permisos de admin
+      if (user?.role !== "admin") {
+        toast.error("Acceso denegado", {
+          description: "Solo los administradores pueden ver esta información",
+        })
+        setIsLoadingAgencies(false)
+        return
+      }
+
+      // Verificar que haya token
+      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+      if (!token) {
+        toast.error("Sesión expirada", {
+          description: "Por favor, inicia sesión nuevamente",
+        })
+        setIsLoadingAgencies(false)
+        return
+      }
+      
+      const response = await listAgencies({ limit: 100, offset: 0 })
+      
+      // Mapear agencias a la estructura esperada
+      const mappedAgencies: Agency[] = response.items.map((agency: AgencyResponse) => ({
+        id: agency.id,
+        nombre: agency.name,
+        email: agency.agency_email,
+        telefono: agency.office_phone,
+        direccion: agency.address,
+      }))
+      
+      setAgencies(mappedAgencies)
     } catch (error: any) {
-      console.error("Error al cargar agencias:", error)
-      toast.error("Error al cargar agencias", {
-        description: error.message || "No se pudieron cargar las agencias",
-      })
+      if (error.message?.includes("permisos") || error.message?.includes("403")) {
+        toast.error("Acceso denegado", {
+          description: "No tienes permisos para ver esta información. Se requiere rol de administrador.",
+        })
+      } else {
+        toast.error("Error al cargar agencias", {
+          description: error.message || "No se pudieron cargar las agencias",
+        })
+      }
     } finally {
       setIsLoadingAgencies(false)
     }
@@ -85,7 +160,7 @@ export function AdminUsersAgencies() {
     (user) =>
       user.nombre.toLowerCase().includes(searchUsers.toLowerCase()) ||
       user.email.toLowerCase().includes(searchUsers.toLowerCase()) ||
-      user.userName.toLowerCase().includes(searchUsers.toLowerCase())
+      (user.nacionalidad && user.nacionalidad.toLowerCase().includes(searchUsers.toLowerCase()))
   )
 
   const filteredAgencies = agencies.filter(
@@ -94,25 +169,27 @@ export function AdminUsersAgencies() {
       (agency.email && agency.email.toLowerCase().includes(searchAgencies.toLowerCase()))
   )
 
-  const getRoleLabel = (role: number) => {
-    switch (role) {
-      case 1:
+  const getRoleLabel = (role: string) => {
+    switch (role.toLowerCase()) {
+      case "admin":
         return "Admin"
-      case 2:
+      case "agency":
         return "Agencia"
-      case 3:
-        return "Usuario"
+      case "seller":
+        return "Vendedor"
       default:
-        return `Rol ${role}`
+        return role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
     }
   }
 
-  const getRoleBadgeVariant = (role: number) => {
-    switch (role) {
-      case 1:
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role.toLowerCase()) {
+      case "admin":
         return "destructive"
-      case 2:
+      case "agency":
         return "default"
+      case "seller":
+        return "secondary"
       default:
         return "secondary"
     }
@@ -122,9 +199,9 @@ export function AdminUsersAgencies() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Usuarios y Agencias</h2>
+          <h2 className="text-2xl font-bold text-foreground">Vendedores y Agencias</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Gestiona usuarios y agencias del sistema
+            Gestiona vendedores y agencias del sistema
           </p>
         </div>
         <Button onClick={() => { fetchUsers(); fetchAgencies(); }} variant="outline" size="sm">
@@ -137,7 +214,7 @@ export function AdminUsersAgencies() {
         <TabsList>
           <TabsTrigger value="users">
             <Users className="h-4 w-4 mr-2" />
-            Usuarios ({users.length})
+            Vendedores ({users.length})
           </TabsTrigger>
           <TabsTrigger value="agencies">
             <Building2 className="h-4 w-4 mr-2" />
@@ -149,12 +226,12 @@ export function AdminUsersAgencies() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-4">
-                <CardTitle>Usuarios</CardTitle>
+                <CardTitle>Vendedores</CardTitle>
                 <div className="flex-1 max-w-sm">
                   <div className="relative">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Buscar usuarios..."
+                      placeholder="Buscar vendedores..."
                       value={searchUsers}
                       onChange={(e) => setSearchUsers(e.target.value)}
                       className="pl-8"
@@ -172,7 +249,7 @@ export function AdminUsersAgencies() {
                 </div>
               ) : filteredUsers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  {searchUsers ? "No se encontraron usuarios" : "No hay usuarios registrados"}
+                  {searchUsers ? "No se encontraron vendedores" : "No hay vendedores registrados"}
                 </div>
               ) : (
                 <Table>
@@ -180,11 +257,10 @@ export function AdminUsersAgencies() {
                     <TableRow>
                       <TableHead>ID</TableHead>
                       <TableHead>Nombre</TableHead>
-                      <TableHead>Usuario</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Rol</TableHead>
                       <TableHead>Agencia ID</TableHead>
-                      <TableHead>Teléfono</TableHead>
+                      <TableHead>Nacionalidad</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -192,15 +268,14 @@ export function AdminUsersAgencies() {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.id}</TableCell>
                         <TableCell>{user.nombre}</TableCell>
-                        <TableCell>{user.userName}</TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>
                           <Badge variant={getRoleBadgeVariant(user.role)}>
                             {getRoleLabel(user.role)}
                           </Badge>
                         </TableCell>
-                        <TableCell>{user.agenciaId || "N/A"}</TableCell>
-                        <TableCell>{user.telefono || "N/A"}</TableCell>
+                        <TableCell>{user.agenciaId || "Independiente"}</TableCell>
+                        <TableCell>{user.nacionalidad || "N/A"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

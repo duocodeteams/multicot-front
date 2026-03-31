@@ -2,7 +2,7 @@
 
 import React from "react"
 import { useState } from "react"
-import { Plane, Shield, Globe, Clock, Award, TrendingUp, Users, Sparkles, Mail, Lock } from "lucide-react"
+import { Plane, Shield, Globe, Clock, Users, Sparkles, Mail, Lock, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -12,7 +12,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { toast } from "sonner"
 
-// Schema de validación con Zod
 const loginSchema = z.object({
   email: z.string()
     .min(1, "El email es obligatorio")
@@ -39,19 +38,13 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true)
-
     try {
       const success = await login(data.email, data.password)
-
       if (success) {
-        toast.success("¡Bienvenido a Biant!", {
-          description: "Inicio de sesión exitoso",
-        })
+        toast.success("¡Bienvenido a Biant!", { description: "Inicio de sesión exitoso" })
         onSuccess()
       } else {
-        toast.error("Credenciales incorrectas", {
-          description: "Por favor verifica tu email y contraseña",
-        })
+        toast.error("Credenciales incorrectas", { description: "Por favor verifica tu email y contraseña" })
       }
     } catch (error: any) {
       toast.error("Error al iniciar sesión", {
@@ -63,212 +56,215 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <div className="flex h-screen bg-background relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-accent/10 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-secondary/10 rounded-full blur-3xl animate-pulse delay-500" />
-      </div>
+    <div className="flex h-screen overflow-hidden">
 
-      {/* Left side - Hero Section */}
-      <div className="hidden lg:flex lg:w-[55%] relative overflow-hidden">
-        {/* Background with overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-secondary" />
+      {/* ── LEFT PANEL ── */}
+      <div
+        className="hidden lg:flex lg:w-[58%] relative flex-col justify-between overflow-hidden"
+        style={{ background: "linear-gradient(160deg, #1e2460 0%, #282f78 55%, #1a2260 100%)" }}
+      >
+        {/* Textura sutil */}
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-20 mix-blend-overlay"
+          className="absolute inset-0 pointer-events-none opacity-[0.06]"
           style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1200&auto=format&fit=crop')"
+            backgroundImage: "url('https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=1400&auto=format&fit=crop')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
           }}
         />
+        {/* Círculos decorativos de fondo */}
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, #e84620 0%, transparent 70%)" }} />
+        <div className="absolute top-0 right-0 w-80 h-80 rounded-full opacity-8"
+          style={{ background: "radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)" }} />
 
-        {/* Animated grid pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `linear-gradient(to right, rgba(255,255,255,0.1) 1px, transparent 1px),
-                             linear-gradient(to bottom, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '40px 40px'
-          }} />
-        </div>
+        {/* Contenido principal */}
+        <div className="relative z-10 flex flex-col justify-center h-full px-10 xl:px-14 py-10">
+          <div className="max-w-lg w-full">
 
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center p-8 xl:p-12 text-white w-full h-full overflow-y-auto">
-          <div className="space-y-6 max-w-lg">
-            {/* Logo and brand */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl">
-                <img className='avatar rounded-md' src="/biantlogo.jpg" alt="" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">Biant</h1>
-                <p className="text-white/90 text-sm">Llevamos tranquilidad</p>
+            {/* Logo */}
+            <div className="mb-10">
+              <div className="inline-flex items-center gap-4 bg-white border border-white/20 rounded-2xl px-6 py-4 backdrop-blur-sm">
+                <img src="/biantsinfondo.png" alt="Biant Travel" className="h-16 w-auto object-contain" />
+                <div className="w-px h-10 bg-white/25" />
+                <img src="/biantlogosf.png" alt="Biant" className="h-16 w-auto object-contain" />
               </div>
             </div>
 
-            {/* Hero text */}
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/25 backdrop-blur-sm border border-accent/40">
-                <Sparkles className="h-3.5 w-3.5 text-white" />
-                <span className="text-xs font-medium text-white">Plataforma de Asistencia al Viajero</span>
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 border border-white/25 mb-5">
+              <Sparkles className="h-3.5 w-3.5 text-white/90" />
+              <span className="text-xs font-semibold text-white/90 tracking-widest uppercase">
+                Plataforma de Asistencia al Viajero
+              </span>
+            </div>
+
+            {/* Heading */}
+            <h2 className="text-4xl xl:text-5xl font-extrabold text-white leading-[1.1] mb-4">
+              Simplificamos<br />
+              tus{" "}
+              <span style={{ color: "#e84620" }}>cotizaciones</span>
+            </h2>
+            <p className="text-white/70 text-base leading-relaxed mb-10 max-w-md">
+              Compará precios de múltiples proveedores en tiempo real
+              y ofrecé las mejores opciones a tus clientes.
+            </p>
+
+            {/* Features */}
+            <div className="space-y-5">
+              {[
+                {
+                  icon: Shield,
+                  title: "Seguridad y Confianza",
+                  desc: "Trabajamos con las mejores aseguradoras para garantizar la protección de tus clientes.",
+                },
+                {
+                  icon: Clock,
+                  title: "Cotización Instantánea",
+                  desc: "Resultados en segundos. Comparación automática de todas las opciones disponibles.",
+                },
+                {
+                  icon: Globe,
+                  title: "Cobertura Global",
+                  desc: "Asistencia para todos los destinos del mundo, desde viajes regionales hasta internacionales.",
+                },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 border border-white/20 shrink-0 mt-0.5">
+                    <Icon className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white text-sm mb-0.5">{title}</h3>
+                    <p className="text-white/60 text-sm leading-snug">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer del panel izquierdo */}
+        <div className="relative z-10 px-10 xl:px-14 pb-8">
+          <div className="border-t border-white/15 pt-5 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-white/50 shrink-0" />
+            <p className="text-xs text-white/50">Más de 500 agentes activos en toda Argentina</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── RIGHT PANEL ── */}
+      <div className="flex flex-1 items-center justify-center bg-gray-50 px-6 sm:px-10 overflow-y-auto">
+        <div className="w-full max-w-[420px] my-auto py-10">
+
+          {/* Mobile logo */}
+          <div className="lg:hidden flex flex-col items-center mb-8 gap-3">
+            <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-5 py-3 shadow-sm">
+              <img src="/biantsinfondo.png" alt="Biant" className="h-10 w-auto object-contain" />
+              <div className="w-px h-8 bg-gray-200" />
+              <img src="/biantlogosf.png" alt="Biant logo" className="h-10 w-auto object-contain" />
+            </div>
+          </div>
+
+          {/* Card */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl shadow-gray-200/80 p-8">
+
+            {/* Header */}
+            <div className="mb-7">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border mb-4"
+                style={{ background: "rgba(232,70,32,0.08)", borderColor: "rgba(232,70,32,0.2)" }}>
+                <Users className="h-3.5 w-3.5" style={{ color: "#e84620" }} />
+                <span className="text-xs font-semibold" style={{ color: "#e84620" }}>Portal de Agentes</span>
               </div>
-
-              <h2 className="text-3xl xl:text-4xl font-bold leading-tight">
-                Simplificamos tus{" "}
-                <span className="text-accent font-black">cotizaciones</span>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
+                Iniciar Sesión
               </h2>
-
-              <p className="text-base text-white/95 leading-relaxed">
-                Compará precios de múltiples proveedores en tiempo real
-                y ofrecé las mejores opciones a tus clientes.
+              <p className="text-sm text-gray-500 mt-1.5">
+                Ingresá tus credenciales para acceder a tu cuenta
               </p>
             </div>
 
-            {/* Features list */}
-            <div className="space-y-3 pt-2">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm shrink-0 mt-0.5">
-                  <Shield className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base mb-0.5 text-white">Seguridad y Confianza</h3>
-                  <p className="text-sm text-white/85 leading-snug">
-                    Trabajamos con las mejores aseguradoras para garantizar
-                    la protección de tus clientes.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm shrink-0 mt-0.5">
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base mb-0.5 text-white">Cotización Instantánea</h3>
-                  <p className="text-sm text-white/85 leading-snug">
-                    Resultados en segundos. Comparación automática
-                    de todas las opciones disponibles.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 backdrop-blur-sm shrink-0 mt-0.5">
-                  <Globe className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-base mb-0.5 text-white">Cobertura Global</h3>
-                  <p className="text-sm text-white/85 leading-snug">
-                    Asistencia para todos los destinos del mundo,
-                    desde viajes regionales hasta internacionales.
-                  </p>
-                </div>
-              </div>
-
-           
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right side - Login Form */}
-      <div className="flex w-full lg:w-[45%] items-center justify-center p-4 sm:p-6 relative z-10 overflow-y-auto">
-        <div className="w-full max-w-md my-auto">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 justify-center mb-8">
-            <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent shadow-lg shadow-accent/30">
-              <Plane className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Biant</h1>
-              <p className="text-xs text-muted-foreground">Cotizador Profesional</p>
-            </div>
-          </div>
-
-          {/* Login card */}
-          <div className="space-y-6 p-6 sm:p-8 rounded-3xl bg-card border border-border shadow-2xl">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20">
-                <Users className="h-3.5 w-3.5 text-accent" />
-                <span className="text-xs font-medium text-accent">Portal de Agentes</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Iniciar Sesión</h2>
-              <p className="text-sm text-muted-foreground">Ingresá tus credenciales para acceder</p>
-            </div>
-
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-              {/* UserName field */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground font-medium text-sm">
+
+              {/* Email */}
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-gray-800 font-semibold text-sm">
                   Email
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="usuario@ejemplo.com"
                     {...register("email")}
-                    className={`h-12 bg-background border-2 pl-11 text-base transition-colors ${
+                    className={`h-11 bg-white border pl-10 text-sm text-gray-900 placeholder:text-gray-400 rounded-xl transition-all focus-visible:ring-2 ${
                       errors.email
-                        ? "border-destructive focus:border-destructive"
-                        : "border-input focus:border-accent"
+                        ? "border-red-400 focus-visible:ring-red-100"
+                        : "border-gray-300 hover:border-gray-400 focus:border-[#282f78] focus-visible:ring-[#282f78]/10"
                     }`}
                     autoComplete="email"
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-sm text-destructive font-medium flex items-center gap-1.5">
-                    <span className="h-1 w-1 rounded-full bg-destructive" />
+                  <p className="text-xs text-red-600 font-medium flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
                     {errors.email.message}
                   </p>
                 )}
               </div>
 
-              {/* Password field */}
-              <div className="space-y-2">
+              {/* Password */}
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-foreground font-medium text-sm">
+                  <Label htmlFor="password" className="text-gray-800 font-semibold text-sm">
                     Contraseña
                   </Label>
                   <button
                     type="button"
-                    className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                    className="text-xs font-semibold transition-colors cursor-pointer"
+                    style={{ color: "#e84620" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#c53a1a")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "#e84620")}
                   >
                     ¿Olvidaste tu contraseña?
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
                     id="password"
                     type="password"
                     placeholder="••••••••"
                     {...register("password")}
-                    className={`h-12 bg-background border-2 pl-11 text-base transition-colors ${
+                    className={`h-11 bg-white border pl-10 text-sm text-gray-900 placeholder:text-gray-400 rounded-xl transition-all focus-visible:ring-2 ${
                       errors.password
-                        ? "border-destructive focus:border-destructive"
-                        : "border-input focus:border-accent"
+                        ? "border-red-400 focus-visible:ring-red-100"
+                        : "border-gray-300 hover:border-gray-400 focus:border-[#282f78] focus-visible:ring-[#282f78]/10"
                     }`}
                     autoComplete="current-password"
                   />
                 </div>
                 {errors.password && (
-                  <p className="text-sm text-destructive font-medium flex items-center gap-1.5">
-                    <span className="h-1 w-1 rounded-full bg-destructive" />
+                  <p className="text-xs text-red-600 font-medium flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
                     {errors.password.message}
                   </p>
                 )}
               </div>
 
-              {/* Submit button */}
+              {/* Submit */}
               <Button
                 type="submit"
-                className="w-full h-12 text-base font-semibold bg-accent hover:bg-accent/90 shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 transition-all"
+                className="w-full h-11 text-sm font-semibold text-white rounded-xl mt-1 transition-all"
+                style={{
+                  background: loading ? "#c53a1a" : "#e84620",
+                  boxShadow: "0 4px 14px rgba(232,70,32,0.35)",
+                }}
                 disabled={loading}
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
-                    <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                     Iniciando sesión...
                   </span>
                 ) : (
@@ -279,16 +275,16 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
                 )}
               </Button>
 
-              
             </form>
           </div>
 
           {/* Footer */}
-          <p className="text-center text-xs text-muted-foreground mt-6">
+          <p className="text-center text-gray-400 text-xs mt-5 leading-relaxed">
             Al iniciar sesión, aceptás nuestros <br />
-            <a href="#" className="text-accent hover:underline font-medium">Términos de Servicio</a>
-            {" "}y{" "}
-            <a href="#" className="text-accent hover:underline font-medium">Política de Privacidad</a>
+            <a href="#" className="text-gray-600 hover:text-gray-900 font-medium transition-colors underline underline-offset-2">
+              Términos de Servicio y Políticas de Privacidad
+            </a>
+
           </p>
         </div>
       </div>

@@ -11,17 +11,24 @@ import { AdminUsersAgencies } from "@/components/admin-users-agencies"
 import { AdminCreateAgency } from "@/components/admin-create-agency"
 import { AdminCreateUser } from "@/components/admin-create-user"
 import { AdminManagement } from "@/components/admin-management"
+import { PlanEmissionView } from "@/components/plan-emission-view"
+import type { SelectedPlan } from "@/components/plan-emission-view"
+import { PlanComparisonView } from "@/components/plan-comparison-view"
+import type { Plan } from "@/components/quotation-results"
 import { useAuth } from "@/lib/auth-context"
-import { apiClient } from "@/lib/api"
+import { createQuote } from "@/lib/services"
+import { mapQuotationDataToApi } from "@/lib/services/quotes.mapper"
 import { toast } from "sonner"
 
-type ViewState = "form" | "loading" | "results" | "settings" | "admin-users-agencies" | "admin-create-agency" | "admin-create-user" | "admin-management"
+type ViewState = "form" | "loading" | "results" | "emission" | "comparison" | "settings" | "admin-users-agencies" | "admin-create-agency" | "admin-create-user" | "admin-management"
 
 export function DashboardView() {
   const { loginResponse } = useAuth()
   const [view, setView] = useState<ViewState>("form")
   const [quotationData, setQuotationData] = useState<QuotationData | null>(null)
   const [quotationResponse, setQuotationResponse] = useState<any | null>(null)
+  const [selectedPlan, setSelectedPlan] = useState<SelectedPlan | null>(null)
+  const [plansToCompare, setPlansToCompare] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
   // Console.log de la respuesta del backend cuando el componente se monta
@@ -37,15 +44,11 @@ export function DashboardView() {
     setIsLoading(true)
 
     try {
-      // Hacer la petición al backend
-      const { data: response } = await apiClient.post("/cotizaciones/cotizar", {
-        destino: data.destino,
-        tipoViaje: data.tipoViaje,
-        desde: data.desde,
-        hasta: data.hasta,
-        edades: data.edades,
-        origen: data.origen,
-      })
+      // Mapear los datos del formulario al formato de la API
+      const apiData = mapQuotationDataToApi(data)
+      
+      // Hacer la petición al backend usando el servicio
+      const response = await createQuote(apiData)
 
       // Guardar la respuesta del backend
       setQuotationResponse(response)
@@ -68,6 +71,24 @@ export function DashboardView() {
 
   const handleBack = () => {
     setView("form")
+  }
+
+  const handleSelectPlan = (plan: SelectedPlan) => {
+    setSelectedPlan(plan)
+    setView("emission")
+  }
+
+  const handleBackToResults = () => {
+    setView("results")
+  }
+
+  const handleCompare = (plans: Plan[]) => {
+    setPlansToCompare(plans)
+    setView("comparison")
+  }
+
+  const handleBackFromComparison = () => {
+    setView("results")
   }
 
   const handleNavigateToForm = () => {
@@ -106,17 +127,35 @@ export function DashboardView() {
         currentView={view}
       />
       <SidebarInset>
-        <DashboardHeader />
+        <DashboardHeader currentView={view} />
         <div className="flex-1 overflow-auto p-4 md:p-6">
           {view === "form" && (
             <QuotationForm onSubmit={handleSubmit} isLoading={isLoading} />
           )}
           {view === "loading" && <QuotationResultsSkeleton />}
           {view === "results" && quotationData && (
-            <QuotationResults 
-              data={quotationData} 
+            <QuotationResults
+              data={quotationData}
               backendResponse={quotationResponse}
-              onBack={handleBack} 
+              onBack={handleBack}
+              onSelectPlan={handleSelectPlan}
+              onCompare={handleCompare}
+            />
+          )}
+          {view === "comparison" && plansToCompare.length >= 2 && quotationData && (
+            <PlanComparisonView
+              plans={plansToCompare}
+              quotationData={quotationData}
+              onBack={handleBackFromComparison}
+              onSelectPlan={handleSelectPlan}
+            />
+          )}
+          {view === "emission" && selectedPlan && quotationData && (
+            <PlanEmissionView
+              plan={selectedPlan}
+              quotationData={quotationData}
+              onBack={handleBackToResults}
+              onBackToForm={handleBack}
             />
           )}
           {view === "settings" && <SettingsView />}

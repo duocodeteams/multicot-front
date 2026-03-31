@@ -6,13 +6,6 @@ import { Moon, Sun, Bell, Globe, User, Mail, Phone, Building2, CreditCard } from
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/lib/auth-context"
 import { useLanguage } from "@/lib/language-context"
@@ -21,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 export function SettingsView() {
   const { user } = useAuth()
   const { theme, setTheme } = useTheme()
-  const { language, setLanguage, t } = useLanguage()
+  const { t } = useLanguage()
   const [mounted, setMounted] = useState(false)
   const [notifications, setNotifications] = useState(true)
 
@@ -42,10 +35,6 @@ export function SettingsView() {
   const handleNotificationsChange = (checked: boolean) => {
     setNotifications(checked)
     localStorage.setItem("notifications_enabled", String(checked))
-  }
-
-  const handleLanguageChange = (value: string) => {
-    setLanguage(value as "es" | "en")
   }
 
   if (!mounted) {
@@ -181,36 +170,6 @@ export function SettingsView() {
               checked={isDark}
               onCheckedChange={handleThemeChange}
             />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Idioma */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <Globe className="h-5 w-5 text-primary" />
-            <div>
-              <CardTitle>{t("language")}</CardTitle>
-              <CardDescription>{t("languageDescription")}</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="language-select">{t("appLanguage")}</Label>
-            <Select value={language} onValueChange={handleLanguageChange}>
-              <SelectTrigger id="language-select" className="w-full md:w-[300px]">
-                <SelectValue placeholder={t("appLanguage")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="es">Español</SelectItem>
-                <SelectItem value="en">English</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {t("languageDescriptionText")}
-            </p>
           </div>
         </CardContent>
       </Card>

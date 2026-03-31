@@ -13,7 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { apiClient } from "@/lib/api"
+import { listAgencies, createSeller } from "@/lib/services"
+import type { AgencyResponse, CreateSellerRequest } from "@/lib/services/types"
 import { toast } from "sonner"
 
 type UserFormData = {
@@ -57,13 +58,30 @@ export function AdminCreateUser() {
   const fetchAgencies = async () => {
     setIsLoadingAgencies(true)
     try {
-      const { data } = await apiClient.get("/agencias")
-      setAgencies(data || [])
+      const response = await listAgencies({ limit: 100, offset: 0 })
+      
+      // Verificar que haya items
+      if (!response.items || response.items.length === 0) {
+        toast.info("No hay agencias disponibles", {
+          description: "No se encontraron agencias registradas en el sistema",
+        })
+        setAgencies([])
+        return
+      }
+      
+      // Mapear agencias a la estructura esperada
+      const mappedAgencies: Agency[] = response.items.map((agency: AgencyResponse) => ({
+        id: agency.id,
+        nombre: agency.name,
+      }))
+      
+      console.log("Agencias mapeadas para el select:", mappedAgencies)
+      setAgencies(mappedAgencies)
     } catch (error: any) {
-      console.error("Error al cargar agencias:", error)
       toast.error("Error al cargar agencias", {
-        description: "No se pudieron cargar las agencias para asignar al usuario",
+        description: error.message || "No se pudieron cargar las agencias para asignar al usuario",
       })
+      setAgencies([])
     } finally {
       setIsLoadingAgencies(false)
     }
@@ -116,27 +134,48 @@ export function AdminCreateUser() {
       return
     }
 
+    // Solo permitir crear vendedores (sellers) según la API
+    // Los roles "admin" y "agency" se crean mediante otros endpoints
+    if (formData.role === "1") {
+      toast.error("No se puede crear administradores", {
+        description: "Los administradores deben ser creados directamente en el sistema",
+      })
+      return
+    }
+
+    if (formData.role === "2") {
+      toast.error("No se puede crear agencias desde aquí", {
+        description: "Las agencias deben ser creadas desde el módulo de creación de agencias",
+      })
+      return
+    }
+
     setIsSubmitting(true)
     try {
-      const payload: any = {
-        nombre: formData.nombre.trim(),
-        userName: formData.userName.trim(),
-        email: formData.email.trim(),
-        password: formData.password,
-        role: parseInt(formData.role),
-        ...(formData.telefono && { telefono: formData.telefono.trim() }),
-        ...(formData.nacionalidad && { nacionalidad: formData.nacionalidad.trim() }),
+      // Separar nombre completo en first_name y last_name
+      const nameParts = formData.nombre.trim().split(" ")
+      const first_name = nameParts[0] || ""
+      const last_name = nameParts.slice(1).join(" ") || ""
+
+      // Construir payload según la estructura de CreateSellerRequest
+      const payload: CreateSellerRequest = {
+        first_name,
+        last_name,
+        address: formData.telefono || "", // Usar teléfono como dirección temporal si no hay campo específico
+        nationality: formData.nacionalidad || "Argentina",
+        birth_date: "1990-01-01", // Fecha por defecto, deberías agregar un campo de fecha de nacimiento
+        comments: "",
+        ...(formData.agenciaId && { agency_id: parseInt(formData.agenciaId) }),
+        user: {
+          email: formData.email.trim(),
+          password: formData.password,
+        },
       }
 
-      // Solo incluir agenciaId si el rol no es admin
-      if (formData.role !== "1" && formData.agenciaId) {
-        payload.agenciaId = parseInt(formData.agenciaId)
-      }
-
-      await apiClient.post("/users", payload)
+      await createSeller(payload)
       
-      toast.success("Usuario creado exitosamente", {
-        description: `El usuario "${formData.userName}" ha sido creado`,
+      toast.success("Vendedor creado exitosamente", {
+        description: `El vendedor "${formData.nombre}" ha sido creado`,
       })
 
       // Limpiar formulario
@@ -153,9 +192,8 @@ export function AdminCreateUser() {
       })
       setErrors({})
     } catch (error: any) {
-      console.error("Error al crear usuario:", error)
-      toast.error("Error al crear usuario", {
-        description: error.message || "No se pudo crear el usuario",
+      toast.error("Error al crear vendedor", {
+        description: error.message || "No se pudo crear el vendedor",
       })
     } finally {
       setIsSubmitting(false)
@@ -173,9 +211,9 @@ export function AdminCreateUser() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground">Crear Usuario</h2>
+        <h2 className="text-2xl font-bold text-foreground">Crear Vendedor</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Registra un nuevo usuario en el sistema
+          Registra un nuevo vendedor en el sistema
         </p>
       </div>
 
@@ -186,7 +224,7 @@ export function AdminCreateUser() {
             Información del Usuario
           </CardTitle>
           <CardDescription>
-            Completa los datos del nuevo usuario
+            Completa los datos del nuevo vendedor
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -291,9 +329,9 @@ export function AdminCreateUser() {
                     <SelectValue placeholder="Seleccione un rol" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Administrador</SelectItem>
-                    <SelectItem value="2">Agencia</SelectItem>
-                    <SelectItem value="3">Usuario</SelectItem>
+                    <SelectItem value="1" disabled>Administrador (no disponible)</SelectItem>
+                    <SelectItem value="2" disabled>Agencia (usar módulo de agencias)</SelectItem>
+                    <SelectItem value="3">Vendedor</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.role && (
@@ -311,18 +349,37 @@ export function AdminCreateUser() {
                   disabled={formData.role === "1" || isLoadingAgencies}
                 >
                   <SelectTrigger className={errors.agenciaId ? "border-destructive" : ""}>
-                    <SelectValue placeholder="Seleccione una agencia" />
+                    <SelectValue placeholder={isLoadingAgencies ? "Cargando..." : "Seleccione una agencia"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {agencies.map((agency) => (
-                      <SelectItem key={agency.id} value={agency.id.toString()}>
-                        {agency.nombre}
+                    {isLoadingAgencies ? (
+                      <SelectItem value="loading" disabled>
+                        Cargando agencias...
                       </SelectItem>
-                    ))}
+                    ) : agencies.length === 0 ? (
+                      <SelectItem value="no-agencies" disabled>
+                        No hay agencias disponibles
+                      </SelectItem>
+                    ) : (
+                      agencies.map((agency) => {
+                        console.log("Renderizando agencia en select:", agency)
+                        return (
+                          <SelectItem key={agency.id} value={agency.id.toString()}>
+                            {agency.nombre}
+                          </SelectItem>
+                        )
+                      })
+                    )}
                   </SelectContent>
                 </Select>
                 {errors.agenciaId && (
                   <p className="text-sm text-destructive">{errors.agenciaId}</p>
+                )}
+                {/* Debug: mostrar cantidad de agencias */}
+                {process.env.NODE_ENV === "development" && (
+                  <p className="text-xs text-muted-foreground">
+                    Debug: {agencies.length} agencias cargadas
+                  </p>
                 )}
               </div>
             </div>
@@ -363,7 +420,7 @@ export function AdminCreateUser() {
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Crear Usuario
+                    Crear Vendedor
                   </>
                 )}
               </Button>

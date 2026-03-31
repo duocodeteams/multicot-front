@@ -54,19 +54,33 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     // Manejo centralizado de errores
     if (error.response) {
+      const status = error.response.status
+      
       // Si el token es inválido o expiró (401), limpiar autenticación
-      if (error.response.status === 401) {
+      if (status === 401) {
         if (typeof window !== "undefined") {
           localStorage.removeItem("auth_token")
           localStorage.removeItem("auth_refresh_token")
+          localStorage.removeItem("auth_user")
           // Redirigir al login si estamos en el cliente
           window.location.href = "/"
         }
       }
       
+      // Si es 403 (Forbidden), puede ser por permisos insuficientes
+      if (status === 403) {
+        const errorMessage = 
+          (error.response.data as any)?.message || 
+          (error.response.data as any)?.detail ||
+          (error.response.data as any)?.error || 
+          "No tienes permisos para realizar esta acción"
+        return Promise.reject(new Error(errorMessage))
+      }
+      
       // El servidor respondió con un código de estado fuera del rango 2xx
       const errorMessage = 
         (error.response.data as any)?.message || 
+        (error.response.data as any)?.detail ||
         (error.response.data as any)?.error || 
         "Error en la petición"
       return Promise.reject(new Error(errorMessage))

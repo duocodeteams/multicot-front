@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { apiClient } from "@/lib/api"
+import { createAgency } from "@/lib/services"
+import type { CreateAgencyRequest } from "@/lib/services/types"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
@@ -75,9 +76,6 @@ export function AdminCreateAgency() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [activationDate, setActivationDate] = useState<Date | undefined>(undefined)
   const [calendarOpen, setCalendarOpen] = useState(false)
-
-  // Ruta del endpoint para crear agencias
-  const AGENCY_CREATE_ENDPOINT = "/v1/agencies"
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -242,25 +240,16 @@ export function AdminCreateAgency() {
   }
 
   // Función para enviar los datos al backend
-  const createAgency = async (): Promise<void> => {
+  const handleCreateAgency = async (): Promise<void> => {
     setIsSubmitting(true)
     
     try {
       const payload = buildPayload()
       
-      // Verificar que el token existe antes de hacer la petición
-      const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
-      if (!token) {
-        throw new Error("No se encontró el token de autenticación. Por favor, inicia sesión nuevamente.")
-      }
-      
-      console.log('Endpoint:', AGENCY_CREATE_ENDPOINT)
-      console.log('Token presente:', token ? "Sí" : "No")
-      console.log('Token completo:', token)
       console.log('Payload:', payload)
       
-      // Usar el apiClient centralizado que ya tiene configurado el token y la URL base
-      const response = await apiClient.post(AGENCY_CREATE_ENDPOINT, payload)
+      // Usar el servicio de creación de agencias
+      const response = await createAgency(payload)
       
       console.log('Respuesta exitosa:', response)
       
@@ -332,7 +321,7 @@ export function AdminCreateAgency() {
       return
     }
 
-    await createAgency()
+    await handleCreateAgency()
   }
 
   const handleChange = (field: keyof AgencyFormData, value: string) => {

@@ -19,7 +19,7 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground transition-colors hover:border-input/80 hover:bg-accent/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:border-ring data-[state=open]:border-ring data-[state=open]:ring-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input disabled:hover:bg-background [&>span]:line-clamp-1 [&[data-state=open]>svg]:rotate-180',
+      'flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground transition-all duration-200 cursor-pointer shadow-sm shadow-black/5 hover:border-input/80 hover:bg-accent/50 hover:shadow-md hover:shadow-black/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:border-ring data-[state=open]:border-ring data-[state=open]:ring-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-input disabled:hover:bg-background [&>span]:line-clamp-1 [&[data-state=open]>svg]:rotate-180',
       className,
     )}
     {...props}
@@ -39,7 +39,7 @@ const SelectScrollUpButton = React.forwardRef<
   <SelectPrimitive.ScrollUpButton
     ref={ref}
     className={cn(
-      'flex cursor-default items-center justify-center py-1',
+      'flex cursor-pointer items-center justify-center py-1 transition-colors hover:bg-accent/50',
       className,
     )}
     {...props}
@@ -56,7 +56,7 @@ const SelectScrollDownButton = React.forwardRef<
   <SelectPrimitive.ScrollDownButton
     ref={ref}
     className={cn(
-      'flex cursor-default items-center justify-center py-1',
+      'flex cursor-pointer items-center justify-center py-1 transition-colors hover:bg-accent/50',
       className,
     )}
     {...props}
