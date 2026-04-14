@@ -113,7 +113,7 @@ export function AdminUsersAgencies() {
         agenciaId: seller.agency_id,
         telefono: undefined, // No viene en la respuesta
         nacionalidad: seller.nationality,
-        password: seller.user.password, // Solo para mostrar en el detalle, no se debe usar para nada más
+        password: seller.user.password, // Mostrar contraseña si viene
         raw: seller,
       }))
       
@@ -566,7 +566,7 @@ export function AdminUsersAgencies() {
                 <Eye className="h-4 w-4 text-muted-foreground" />
                 <span className="font-semibold">Contraseña:</span>
                 <span className="font-mono">
-                  {(selectedUser.raw.user as any).password ? (showSellerPassword ? (selectedUser.raw.user as any).password : "••••••••") : "No disponible"}
+                  {selectedUser.password ? (showSellerPassword ? selectedUser.password : "••••••••") : "No disponible"}
                 </span>
                 <Button
                   type="button"
@@ -574,7 +574,7 @@ export function AdminUsersAgencies() {
                   size="icon"
                   className="h-7 w-7"
                   onClick={() => setShowSellerPassword((v) => !v)}
-                  disabled={!(selectedUser.raw.user as any).password}
+                  disabled={!selectedUser.password}
                   aria-label={showSellerPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                   {showSellerPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

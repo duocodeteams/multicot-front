@@ -183,6 +183,7 @@ export interface SellerUserResponse {
   id: number
   email: string
   role: "seller"
+  password?: string // Contraseña en texto plano (solo si backend la envía)
 }
 
 export interface SellerResponse {
