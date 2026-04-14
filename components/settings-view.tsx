@@ -8,13 +8,11 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/lib/auth-context"
-import { useLanguage } from "@/lib/language-context"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 export function SettingsView() {
   const { user } = useAuth()
   const { theme, setTheme } = useTheme()
-  const { t } = useLanguage()
   const [mounted, setMounted] = useState(false)
   const [notifications, setNotifications] = useState(true)
 
@@ -50,9 +48,9 @@ export function SettingsView() {
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{t("settingsTitle")}</h1>
+        <h1 className="text-2xl font-bold text-foreground">Configuración</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {t("settingsDescription")}
+          Gestiona tus preferencias y datos de cuenta
         </p>
       </div>
 
@@ -62,8 +60,8 @@ export function SettingsView() {
           <div className="flex items-center gap-3">
             <User className="h-5 w-5 text-primary" />
             <div>
-              <CardTitle>{t("userData")}</CardTitle>
-              <CardDescription>{t("userDataDescription")}</CardDescription>
+              <CardTitle>Datos del Usuario</CardTitle>
+              <CardDescription>Información de tu cuenta</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -92,7 +90,7 @@ export function SettingsView() {
             <div className="flex items-start gap-3">
               <Mail className="h-4 w-4 text-muted-foreground mt-1" />
               <div className="flex-1">
-                <Label className="text-xs text-muted-foreground">{t("email")}</Label>
+                <Label className="text-xs text-muted-foreground">Email</Label>
                 <p className="text-sm font-medium text-foreground">{user?.email || "N/A"}</p>
               </div>
             </div>
@@ -100,7 +98,7 @@ export function SettingsView() {
             <div className="flex items-start gap-3">
               <User className="h-4 w-4 text-muted-foreground mt-1" />
               <div className="flex-1">
-                <Label className="text-xs text-muted-foreground">{t("user")}</Label>
+                <Label className="text-xs text-muted-foreground">Usuario</Label>
                 <p className="text-sm font-medium text-foreground">{user?.userName || "N/A"}</p>
               </div>
             </div>
@@ -109,7 +107,7 @@ export function SettingsView() {
               <div className="flex items-start gap-3">
                 <Phone className="h-4 w-4 text-muted-foreground mt-1" />
                 <div className="flex-1">
-                  <Label className="text-xs text-muted-foreground">{t("phone")}</Label>
+                  <Label className="text-xs text-muted-foreground">Teléfono</Label>
                   <p className="text-sm font-medium text-foreground">{user.telefono}</p>
                 </div>
               </div>
@@ -118,9 +116,9 @@ export function SettingsView() {
             <div className="flex items-start gap-3">
               <Building2 className="h-4 w-4 text-muted-foreground mt-1" />
               <div className="flex-1">
-                <Label className="text-xs text-muted-foreground">{t("agency")}</Label>
+                <Label className="text-xs text-muted-foreground">Agencia</Label>
                 <p className="text-sm font-medium text-foreground">
-                  {user?.agenciaId ? `${t("agency")} #${user.agenciaId}` : "N/A"}
+                  {user?.agenciaId ? `Agencia #${user.agenciaId}` : "N/A"}
                 </p>
               </div>
             </div>
@@ -129,7 +127,7 @@ export function SettingsView() {
               <div className="flex items-start gap-3">
                 <Globe className="h-4 w-4 text-muted-foreground mt-1" />
                 <div className="flex-1">
-                  <Label className="text-xs text-muted-foreground">{t("nationality")}</Label>
+                  <Label className="text-xs text-muted-foreground">Nacionalidad</Label>
                   <p className="text-sm font-medium text-foreground">{user.nacionalidad}</p>
                 </div>
               </div>
@@ -150,8 +148,8 @@ export function SettingsView() {
               <Sun className="h-5 w-5 text-primary" />
             )}
             <div>
-              <CardTitle>{t("colorTheme")}</CardTitle>
-              <CardDescription>{t("colorThemeDescription")}</CardDescription>
+              <CardTitle>Tema de Color</CardTitle>
+              <CardDescription>Elige entre tema claro u oscuro</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -159,10 +157,10 @@ export function SettingsView() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="theme-switch" className="text-base">
-                {t("darkMode")}
+                Modo Oscuro
               </Label>
               <p className="text-sm text-muted-foreground">
-                {t("darkModeDescription")}
+                Activa el tema oscuro para una mejor experiencia visual
               </p>
             </div>
             <Switch
@@ -180,8 +178,8 @@ export function SettingsView() {
           <div className="flex items-center gap-3">
             <Bell className="h-5 w-5 text-primary" />
             <div>
-              <CardTitle>{t("notifications")}</CardTitle>
-              <CardDescription>{t("notificationsDescription")}</CardDescription>
+              <CardTitle>Notificaciones</CardTitle>
+              <CardDescription>Gestiona tus preferencias de notificaciones</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -189,10 +187,10 @@ export function SettingsView() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="notifications-switch" className="text-base">
-                {t("enableNotifications")}
+                Activar Notificaciones
               </Label>
               <p className="text-sm text-muted-foreground">
-                {t("notificationsDescriptionText")}
+                Recibe alertas y actualizaciones importantes
               </p>
             </div>
             <Switch

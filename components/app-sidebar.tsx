@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
-import { useLanguage } from "@/lib/language-context"
 import { toast } from "sonner"
 
 type AppSidebarProps = {
@@ -50,10 +49,10 @@ export function AppSidebar({
   currentView = "form"
 }: AppSidebarProps) {
   const { user, logout } = useAuth()
-  const { t } = useLanguage()
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false)
 
-  const isAdmin = user?.role === "admin" || user?.role === 1
+  const normalizedRole = String(user?.role ?? "").toLowerCase()
+  const isAdmin = normalizedRole === "admin" || normalizedRole === "1"
   const supportPhone = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? ""
 
   const getInitials = () => {
@@ -67,10 +66,10 @@ export function AppSidebar({
   }
 
   const getRoleLabel = () => {
-    const role = user?.role
-    if (role === "admin" || role === 1) return "Admin"
-    if (role === "agency" || role === 2) return "Agencia"
-    if (role === "seller" || role === 3) return "Vendedor"
+    const role = String(user?.role ?? "").toLowerCase()
+    if (role === "admin" || role === "1") return "Admin"
+    if (role === "agency" || role === "2") return "Agencia"
+    if (role === "seller" || role === "3") return "Vendedor"
     return "Usuario"
   }
 
@@ -122,7 +121,7 @@ export function AppSidebar({
                   onClick={onNavigateToForm}
                 >
                   <LayoutDashboard className="h-4 w-4" />
-                  <span>{t("dashboard")}</span>
+                  <span>Dashboard</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -196,20 +195,20 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={currentView === "settings"}
-                  tooltip={t("settings")}
+                  tooltip="Configuración"
                   onClick={onNavigateToSettings}
                 >
                   <Settings className="h-4 w-4" />
-                  <span>{t("settings")}</span>
+                  <span>Configuración</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  tooltip={t("help")}
+                  tooltip="Ayuda"
                   onClick={() => setIsSupportModalOpen(true)}
                 >
                   <HelpCircle className="h-4 w-4" />
-                  <span>{t("help")}</span>
+                  <span>Ayuda</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

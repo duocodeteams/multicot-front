@@ -23,3 +23,18 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
   const response = await apiClient.post<LoginResponse>("/v1/auth/login", credentials)
   return response.data
 }
+
+/**
+ * Cambia la contraseña de un usuario (admin)
+ * @param userId ID del usuario
+ * @param password Nueva contraseña
+ * @param token Token de autenticación del admin
+ */
+export async function adminChangeUserPassword(userId: number, password: string, token: string) {
+  const response = await apiClient.patch(`/v1/users/${userId}/password`, { password }, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  return response.data
+}

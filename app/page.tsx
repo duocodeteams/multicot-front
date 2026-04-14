@@ -1,7 +1,6 @@
 "use client"
 
 import { AuthProvider, useAuth } from "@/lib/auth-context"
-import { LanguageProvider } from "@/lib/language-context"
 import { LoginForm } from "@/components/login-form"
 import { DashboardView } from "@/components/dashboard-view"
 
@@ -26,10 +25,8 @@ function AppContent() {
 
 export default function Page() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </LanguageProvider>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }

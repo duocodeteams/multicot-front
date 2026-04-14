@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from "@/components/theme-provider"
+import { CountriesProvider } from "@/lib/countries-context"
 
 import './globals.css'
 
@@ -27,13 +28,15 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          {children}
-          <Toaster
-            position="top-right"
-            expand={false}
-            richColors
-            closeButton
-          />
+          <CountriesProvider>
+            {children}
+            <Toaster
+              position="top-right"
+              expand={false}
+              richColors
+              closeButton
+            />
+          </CountriesProvider>
         </ThemeProvider>
       </body>
     </html>

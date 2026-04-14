@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/lib/auth-context"
-import { useLanguage } from "@/lib/language-context"
 import { toast } from "sonner"
 
 type ViewState =
@@ -45,7 +44,6 @@ type DashboardHeaderProps = {
 
 export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) {
   const { user, logout } = useAuth()
-  const { t } = useLanguage()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const viewInfo = VIEW_TITLES[currentView] ?? { label: "Dashboard" }
@@ -54,12 +52,12 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
     setIsLoggingOut(true)
     try {
       await logout()
-      toast.success(t("logoutSuccess"), {
-        description: t("logoutSuccessDescription"),
+      toast.success("Sesión cerrada", {
+        description: "Has cerrado sesión correctamente",
       })
     } catch (error) {
-      toast.error(t("logoutError"), {
-        description: t("logoutError"),
+      toast.error("Error al cerrar sesión", {
+        description: "Error al cerrar sesión",
       })
     } finally {
       setIsLoggingOut(false)
@@ -89,13 +87,13 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
           {/* Contenedor de logos */}
           <div className="flex items-center gap-3.5 rounded-xl bg-white px-4 py-2.5 shadow-sm ring-1 ring-gray-100 shrink-0">
             <img
-              src="/biantlogosf.png"
+              src="/portal/biantlogosf.png"
               alt="Biant"
               className="h-14 w-14 object-cover"
             />
             <div className="w-px h-10 bg-gray-200" />
             <img
-              src="/biantsinfondo.png"
+              src="/portal/biantsinfondo.png"
               alt="Biant Travel"
               className="h-12 w-auto max-w-[220px] object-cover"
             />
@@ -153,9 +151,9 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
                 <p className="text-xs text-muted-foreground">{user?.email || "Sin email"}</p>
                 {user?.role !== undefined && (
                   <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary w-fit mt-0.5">
-                    {user.role === "admin" || user.role === 1
+                    {String(user.role).toLowerCase() === "admin" || String(user.role) === "1"
                       ? "Admin"
-                      : user.role === "agency" || user.role === 2
+                      : String(user.role).toLowerCase() === "agency" || String(user.role) === "2"
                       ? "Agencia"
                       : "Vendedor"}
                   </span>
@@ -166,7 +164,7 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
           <DropdownMenuSeparator />
           <DropdownMenuItem className="gap-2">
             <User className="h-4 w-4" />
-            {t("myProfile")}
+            Mi Perfil
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -175,7 +173,7 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
             className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
           >
             <LogOut className="h-4 w-4" />
-            {isLoggingOut ? t("loggingIn") : t("logout")}
+            {isLoggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
           </DropdownMenuItem>
         </DropdownMenuContent>
         </DropdownMenu>

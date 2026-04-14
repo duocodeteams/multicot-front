@@ -21,6 +21,7 @@ import { createAgency } from "@/lib/services"
 import type { CreateAgencyRequest } from "@/lib/services/types"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useCountries } from "@/lib/countries-context"
 
 type AgencyFormData = {
   // Campos requeridos
@@ -49,6 +50,7 @@ type AgencyFormData = {
 }
 
 export function AdminCreateAgency() {
+  const { countriesOptions } = useCountries()
   const [formData, setFormData] = useState<AgencyFormData>({
     name: "",
     legal_name: "",
@@ -246,8 +248,6 @@ export function AdminCreateAgency() {
     try {
       const payload = buildPayload()
       
-      console.log('Payload:', payload)
-      
       // Usar el servicio de creación de agencias
       const response = await createAgency(payload)
       
@@ -416,16 +416,23 @@ export function AdminCreateAgency() {
 
               <div className="space-y-2">
                 <Label htmlFor="country">
-                  País (Código) <span className="text-destructive">*</span>
+                  País <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="country"
+                <Select
                   value={formData.country}
-                  onChange={(e) => handleChange("country", e.target.value.toUpperCase())}
-                  placeholder="AR"
-                  maxLength={2}
-                  className={errors.country ? "border-destructive" : ""}
-                />
+                  onValueChange={(value) => handleChange("country", value)}
+                >
+                  <SelectTrigger id="country" className={errors.country ? "border-destructive" : ""}>
+                    <SelectValue placeholder="Seleccione un país" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countriesOptions.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {country.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {errors.country && (
                   <p className="text-sm text-destructive">{errors.country}</p>
                 )}

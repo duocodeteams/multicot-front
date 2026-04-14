@@ -56,3 +56,17 @@ export function mapQuotationDataToApi(data: QuotationData): CreateQuoteRequest {
     trip_type: mapTripTypeToApi(data.tipoViaje),
   }
 }
+
+/** * Mapea la compañia del back y la convierte a un formato legible para el frontend
+ */
+export function mapCompanyToFormalCompany (company: string): string {
+  const mapping: Record<string, string> = {
+    "Cardinal": "Cardinal Assistance",
+    "GoAssistance": "GO! Assistance",
+    "New Travel": "New Travel Assistance",
+    "Terrawind": "Terrawind Global Protection",
+    "Universal": "Universal Assistance",
+  }
+
+  return mapping[company] || company
+}

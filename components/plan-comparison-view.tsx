@@ -11,6 +11,7 @@ import {
   CalendarDays,
   Users,
   Clock,
+  Printer,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -24,6 +25,10 @@ import {
   getCompanyTheme,
   formatNumber,
 } from "@/components/quotation-results"
+
+function formatARS(num: number): string {
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(num)
+}
 
 // ── Tipos ──────────────────────────────────────────────────
 
@@ -206,6 +211,13 @@ function PlanSelectorCard({
 const FIXED_ROWS: { key: string; label: string; getValue: (p: Plan) => string }[] = [
   { key: "company", label: "Compañía", getValue: (p) => p.empresaCotizacion },
   { key: "price", label: "Precio Total", getValue: (p) => `USD ${formatNumber(p.price)}` },
+  { key: "priceARS", label: "Precio Total (ARS)", getValue: (p) => {
+    if (p.exchange_rate) {
+      const ars = Math.round(p.price * p.exchange_rate)
+      return `${formatARS(ars)}\n(TC: ${formatNumber(p.exchange_rate)})`
+    }
+    return "-"
+  } },
   { key: "priceDay", label: "Precio / día", getValue: (p) => `USD ${formatNumber(p.pricePerDay)}` },
   { key: "maxCov", label: "Cobertura Máxima", getValue: (p) => p.maxCoverage },
 ]
@@ -254,15 +266,21 @@ function ComparisonTable({
                         className="mb-1.5 h-6 w-auto object-contain"
                       />
                     )}
-                    <p
-                      className="text-[10px] font-bold uppercase tracking-wide"
-                      style={{ color: theme.labelColor }}
+                    <span
+                      className="text-xl font-black leading-none"
+                      style={{ color: selected ? theme.labelColor : "hsl(var(--foreground))" }}
                     >
-                      {plan.empresaCotizacion}
-                    </p>
-                    <p className="text-sm font-semibold text-foreground leading-snug mt-0.5">
-                      {plan.name}
-                    </p>
+                      USD {formatNumber(plan.price)}
+                    </span>
+                    {plan.exchange_rate && (
+                      <span className="text-[13px] font-semibold text-green-700">
+                        {formatARS(Math.round(plan.price * plan.exchange_rate))}
+                        <span className="text-[10px] text-muted-foreground ml-1">(TC: {formatNumber(plan.exchange_rate)})</span>
+                      </span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground">
+                      {plan.maxCoverage} cobertura máx.
+                    </span>
                   </div>
                 </th>
               )
@@ -387,6 +405,159 @@ export function PlanComparisonView({
   const formatDate = (d: Date) =>
     d.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })
 
+  const handleDownloadPdf = () => {
+    const selectedPlansSnap = plans.filter((p) => selectedIds.has(p.id))
+    if (selectedPlansSnap.length < 2) return
+
+    const win = window.open("", "_blank", "width=1200,height=900")
+    if (!win) return
+
+    const origin = window.location.origin
+    const destLabel = destinationLabels[quotationData.destino] || quotationData.destino
+    const dateStr = `${formatDate(desde)} → ${formatDate(hasta)}`
+    const daysStr = `${days} día${days > 1 ? "s" : ""}`
+    const paxStr = `${quotationData.edades.length} pasajero${quotationData.edades.length > 1 ? "s" : ""} · ${quotationData.edades.join(", ")} años`
+    const todayStr = new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
+
+    const themes = selectedPlansSnap.map((p) => getCompanyTheme(p.empresaCotizacion))
+    const coveragesByPlan = selectedPlansSnap.map((plan) => uniqueCoverages(plan))
+    const maxRows = Math.max(...coveragesByPlan.map((c) => c.length), 0)
+
+    const pillStyle = `display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;border:1px solid #e2e8f0;background:#f8fafc;font-size:11px;font-weight:600;color:#334155;`
+
+    // Cabecera de columnas
+    const theadCols = selectedPlansSnap.map((plan, i) => {
+      const t = themes[i]
+      const logoHtml = plan.imagen
+        ? `<img src="${origin}${plan.imagen.startsWith("/") ? plan.imagen : "/" + plan.imagen}" style="height:24px;width:auto;object-fit:contain;display:block;margin-bottom:5px;" />`
+        : ""
+      return `
+        <th style="min-width:150px;padding:0;text-align:left;vertical-align:top;border:1px solid #e2e8f0;">
+          <div style="height:5px;background:linear-gradient(to right,${t.barFrom},${t.barTo});"></div>
+          <div style="padding:10px 12px;background:${t.priceBg};">
+            ${logoHtml}
+            <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:${t.labelColor};">${plan.empresaCotizacion}</div>
+            <div style="font-size:12px;font-weight:600;color:#1e293b;margin-top:3px;line-height:1.3;">${plan.name}</div>
+          </div>
+        </th>`
+    }).join("")
+
+    // Filas de precio/datos fijos
+    const fixedRowsHtml = FIXED_ROWS.map((row, idx) =>
+      `<tr style="background:${idx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
+        <td style="padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;white-space:nowrap;">${row.label}</td>
+        ${selectedPlansSnap.map((plan, i) => {
+        const t = themes[i]
+        const isPrice = row.key === "price"
+        if (row.key === "priceARS") {
+          if (plan.exchange_rate) {
+            const ars = Math.round(plan.price * plan.exchange_rate)
+            return `<td style=\"padding:8px 12px;font-weight:700;font-size:13px;color:#1e293b;border:1px solid #e2e8f0;\">${formatARS(ars)}<br/><span style=\"font-size:10px;color:#64748b;\">(TC: ${formatNumber(plan.exchange_rate)})</span></td>`
+          }
+          return `<td style=\"padding:8px 12px;font-size:13px;color:#64748b;border:1px solid #e2e8f0;\">-</td>`
+        }
+        return `<td style=\"padding:8px 12px;font-weight:${isPrice ? "800" : "500"};font-size:${isPrice ? "14px" : "12px"};color:${isPrice ? t.labelColor : "#1e293b"};border:1px solid #e2e8f0;\">${row.getValue(plan)}</td>`
+      }).join("")}
+      </tr>`
+    ).join("")
+
+    // Separador de coberturas
+    const covHeaderHtml = `
+      <tr style="background:#f1f5f9;border-top:2px solid #cbd5e1;">
+        <td colspan="${selectedPlansSnap.length + 1}" style="padding:7px 12px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border:1px solid #e2e8f0;">Coberturas incluidas</td>
+      </tr>`
+
+    // Filas de coberturas
+    const covRowsHtml = Array.from({ length: maxRows }).map((_, rowIdx) =>
+      `<tr style="background:${rowIdx % 2 === 0 ? "#ffffff" : "#f8fafc"};">
+        <td style="padding:6px 12px;font-size:10px;font-weight:600;color:#475569;background:${rowIdx % 2 === 0 ? "#f8fafc" : "#eef2f7"};border:1px solid #e2e8f0;white-space:nowrap;">Prestación ${rowIdx + 1}</td>
+        ${selectedPlansSnap.map((plan, i) => {
+        const t = themes[i]
+        const item = coveragesByPlan[i][rowIdx]
+        return `<td style="padding:6px 12px;font-size:11px;color:#334155;border:1px solid #e2e8f0;vertical-align:top;">
+            ${item
+            ? `<span style="color:${t.dotColor};font-weight:700;margin-right:4px;">✓</span>${item}`
+            : `<span style="color:#cbd5e1;">—</span>`
+          }
+          </td>`
+      }).join("")}
+      </tr>`
+    ).join("")
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Comparación de Planes — Biant</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; color:#1e293b; background:#fff; }
+    @page { size:A4 landscape; margin:10mm 12mm 14mm; }
+    table { border-collapse:collapse; width:100%; }
+  </style>
+</head>
+<body>
+  <div style="padding:0;">
+
+    <!-- HEADER: logos -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <img src="${origin}/portal/biantsinfondo.png" alt="Biant" style="height:46px;width:auto;object-fit:contain;" />
+      <div style="text-align:right;">
+        <img src="${origin}/biantlogosf.png" alt="Biant" style="height:30px;width:auto;object-fit:contain;opacity:0.6;display:block;margin-left:auto;" />
+        <div style="font-size:10px;color:#94a3b8;margin-top:3px;">Cotizador de Asistencia al Viajero</div>
+      </div>
+    </div>
+
+    <div style="border-top:2px solid #e2e8f0;margin-bottom:14px;"></div>
+
+    <!-- Título + fecha -->
+    <h1 style="font-size:20px;font-weight:800;color:#1e293b;letter-spacing:-0.4px;margin-bottom:3px;">Comparación de Planes</h1>
+    <p style="font-size:11px;color:#64748b;margin-bottom:12px;">Generado el ${todayStr}</p>
+
+    <!-- Pills info del viaje -->
+    <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;">
+      <span style="${pillStyle}">📍 ${destLabel}</span>
+      <span style="${pillStyle}">📅 ${dateStr}</span>
+      <span style="${pillStyle}">⏱ ${daysStr}</span>
+      <span style="${pillStyle}">👤 ${paxStr}</span>
+    </div>
+
+    <div style="border-top:1px solid #e2e8f0;margin-bottom:16px;"></div>
+
+    <!-- Tabla de comparación -->
+    <table>
+      <thead>
+        <tr>
+          <th style="width:140px;background:#f8fafc;border:1px solid #e2e8f0;padding:0;"></th>
+          ${theadCols}
+        </tr>
+      </thead>
+      <tbody>
+        ${fixedRowsHtml}
+        ${covHeaderHtml}
+        ${covRowsHtml}
+      </tbody>
+    </table>
+
+    <!-- Footer -->
+    <div style="margin-top:18px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:10px;color:#94a3b8;">Biant — Cotizador de Asistencia al Viajero</span>
+      <span style="font-size:10px;color:#94a3b8;">${todayStr}</span>
+    </div>
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() { window.print(); }, 600);
+    };
+  </script>
+</body>
+</html>`
+
+    win.document.write(html)
+    win.document.close()
+  }
+
   const togglePlan = (id: string | number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -404,6 +575,7 @@ export function PlanComparisonView({
 
   return (
     <div className="flex flex-col gap-6">
+
       {/* ── Barra superior ── */}
       <div className="flex items-center gap-3 flex-wrap">
         <Button
@@ -432,10 +604,9 @@ export function PlanComparisonView({
           <Button
             size="sm"
             className="shrink-0 gap-1.5"
-            disabled
-            title="Descarga de PDF temporalmente deshabilitada"
+            onClick={handleDownloadPdf}
           >
-            <Download className="h-4 w-4" />
+            <Printer className="h-4 w-4" />
             Descargar PDF
           </Button>
         )}
@@ -566,10 +737,9 @@ export function PlanComparisonView({
               variant="outline"
               size="sm"
               className="gap-1.5"
-              disabled
-              title="Descarga de PDF temporalmente deshabilitada"
+              onClick={handleDownloadPdf}
             >
-              <Download className="h-4 w-4" />
+              <Printer className="h-4 w-4" />
               Descargar comparación en PDF
             </Button>
           </div>

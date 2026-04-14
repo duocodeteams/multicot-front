@@ -113,22 +113,7 @@ export function AdminManagement() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cotizaciones</CardTitle>
-            <Settings className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-2xl font-bold">{stats?.totalQuotations || 0}</div>
-            )}
-            <p className="text-xs text-muted-foreground mt-1">
-              Total de cotizaciones
-            </p>
-          </CardContent>
-        </Card>
+       
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

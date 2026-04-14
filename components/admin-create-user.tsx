@@ -16,6 +16,7 @@ import {
 import { listAgencies, createSeller } from "@/lib/services"
 import type { AgencyResponse, CreateSellerRequest } from "@/lib/services/types"
 import { toast } from "sonner"
+import { useCountries } from "@/lib/countries-context"
 
 type UserFormData = {
   nombre: string
@@ -35,6 +36,7 @@ type Agency = {
 }
 
 export function AdminCreateUser() {
+  const { countriesOptions } = useCountries()
   const [formData, setFormData] = useState<UserFormData>({
     nombre: "",
     userName: "",
@@ -75,7 +77,6 @@ export function AdminCreateUser() {
         nombre: agency.name,
       }))
       
-      console.log("Agencias mapeadas para el select:", mappedAgencies)
       setAgencies(mappedAgencies)
     } catch (error: any) {
       toast.error("Error al cargar agencias", {
@@ -162,7 +163,7 @@ export function AdminCreateUser() {
         first_name,
         last_name,
         address: formData.telefono || "", // Usar teléfono como dirección temporal si no hay campo específico
-        nationality: formData.nacionalidad || "Argentina",
+        nationality: formData.nacionalidad || "AR",
         birth_date: "1990-01-01", // Fecha por defecto, deberías agregar un campo de fecha de nacimiento
         comments: "",
         ...(formData.agenciaId && { agency_id: parseInt(formData.agenciaId) }),
@@ -361,25 +362,16 @@ export function AdminCreateUser() {
                         No hay agencias disponibles
                       </SelectItem>
                     ) : (
-                      agencies.map((agency) => {
-                        console.log("Renderizando agencia en select:", agency)
-                        return (
-                          <SelectItem key={agency.id} value={agency.id.toString()}>
-                            {agency.nombre}
-                          </SelectItem>
-                        )
-                      })
+                      agencies.map((agency) => (
+                        <SelectItem key={agency.id} value={agency.id.toString()}>
+                          {agency.nombre}
+                        </SelectItem>
+                      ))
                     )}
                   </SelectContent>
                 </Select>
                 {errors.agenciaId && (
                   <p className="text-sm text-destructive">{errors.agenciaId}</p>
-                )}
-                {/* Debug: mostrar cantidad de agencias */}
-                {process.env.NODE_ENV === "development" && (
-                  <p className="text-xs text-muted-foreground">
-                    Debug: {agencies.length} agencias cargadas
-                  </p>
                 )}
               </div>
             </div>
@@ -397,12 +389,21 @@ export function AdminCreateUser() {
 
               <div className="space-y-2">
                 <Label htmlFor="nacionalidad">Nacionalidad</Label>
-                <Input
-                  id="nacionalidad"
-                  value={formData.nacionalidad}
-                  onChange={(e) => handleChange("nacionalidad", e.target.value)}
-                  placeholder="Argentina"
-                />
+                <Select
+                  value={formData.nacionalidad || ""}
+                  onValueChange={(value) => handleChange("nacionalidad", value)}
+                >
+                  <SelectTrigger id="nacionalidad">
+                    <SelectValue placeholder="Seleccione un país" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countriesOptions.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {country.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

@@ -6,6 +6,14 @@ import { Plane, Shield, Globe, Clock, Users, Sparkles, Mail, Lock, CheckCircle2 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useAuth } from "@/lib/auth-context"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -26,7 +34,12 @@ type LoginFormData = z.infer<typeof loginSchema>
 export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const { login } = useAuth()
   const [loading, setLoading] = useState(false)
-
+  const [forgotModalOpen, setForgotModalOpen] = useState(false)
+  const [forgotUserName, setForgotUserName] = useState("")
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotSent, setForgotSent] = useState(false)
+  const FORMSPREE_FORGOT_PASSWORD_ENDPOINT =
+    process.env.NEXT_PUBLIC_FORMSPREE_FORGOT_PASSWORD_ENDPOINT || "https://formspree.io/f/xdapyjnp"
   const {
     register,
     handleSubmit,
@@ -52,6 +65,61 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const resetForgotState = () => {
+    setForgotUserName("")
+    setForgotLoading(false)
+    setForgotSent(false)
+  }
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const trimmedUserName = forgotUserName.trim()
+    if (!trimmedUserName) {
+      toast.error("Ingresá tu nombre de usuario")
+      return
+    }
+
+    if (!FORMSPREE_FORGOT_PASSWORD_ENDPOINT) {
+      toast.error("Falta configurar Formspree", {
+        description: "Definí NEXT_PUBLIC_FORMSPREE_FORGOT_PASSWORD_ENDPOINT en tus variables de entorno.",
+      })
+      return
+    }
+
+    setForgotLoading(true)
+    try {
+      const response = await fetch(FORMSPREE_FORGOT_PASSWORD_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          nombreUsuario: trimmedUserName,
+          origen: "login-olvido-contrasena",
+          fechaEnvio: new Date().toISOString(),
+          _subject: `Solicitud de recuperacion de contrasena - ${trimmedUserName}`,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("No se pudo enviar la solicitud")
+      }
+
+      setForgotSent(true)
+      toast.success("Solicitud enviada", {
+        description: "Recibimos tu pedido para recuperar la contraseña.",
+      })
+    } catch (error: any) {
+      toast.error("No se pudo enviar la solicitud", {
+        description: error.message || "Intentá nuevamente en unos minutos.",
+      })
+    } finally {
+      setForgotLoading(false)
     }
   }
 
@@ -85,9 +153,9 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
             {/* Logo */}
             <div className="mb-10">
               <div className="inline-flex items-center gap-4 bg-white border border-white/20 rounded-2xl px-6 py-4 backdrop-blur-sm">
-                <img src="/biantsinfondo.png" alt="Biant Travel" className="h-16 w-auto object-contain" />
+                <img src="/portal/biantsinfondo.png" alt="Biant Travel" className="h-16 w-auto object-contain" />
                 <div className="w-px h-10 bg-white/25" />
-                <img src="/biantlogosf.png" alt="Biant" className="h-16 w-auto object-contain" />
+                <img src="/portal/biantlogosf.png" alt="Biant" className="h-16 w-auto object-contain" />
               </div>
             </div>
 
@@ -159,9 +227,9 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           {/* Mobile logo */}
           <div className="lg:hidden flex flex-col items-center mb-8 gap-3">
             <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-5 py-3 shadow-sm">
-              <img src="/biantsinfondo.png" alt="Biant" className="h-10 w-auto object-contain" />
+              <img src="/portal/biantsinfondo.png" alt="Biant" className="h-10 w-auto object-contain" />
               <div className="w-px h-8 bg-gray-200" />
-              <img src="/biantlogosf.png" alt="Biant logo" className="h-10 w-auto object-contain" />
+              <img src="/portal/biantlogosf.png" alt="Biant logo" className="h-10 w-auto object-contain" />
             </div>
           </div>
 
@@ -225,6 +293,10 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
                     style={{ color: "#e84620" }}
                     onMouseEnter={e => (e.currentTarget.style.color = "#c53a1a")}
                     onMouseLeave={e => (e.currentTarget.style.color = "#e84620")}
+                    onClick={() => {
+                      resetForgotState()
+                      setForgotModalOpen(true)
+                    }}
                   >
                     ¿Olvidaste tu contraseña?
                   </button>
@@ -288,6 +360,72 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           </p>
         </div>
       </div>
+
+      <Dialog
+        open={forgotModalOpen}
+        onOpenChange={(open) => {
+          setForgotModalOpen(open)
+          if (!open) resetForgotState()
+        }}
+      >
+        <DialogContent className="sm:max-w-[420px] rounded-2xl p-0 overflow-hidden">
+          <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #e84620, #c53a1a)" }} />
+          <div className="p-6">
+            <DialogHeader className="space-y-2 text-left">
+              <DialogTitle className="text-xl text-gray-900">Recuperar contraseña</DialogTitle>
+              <DialogDescription>
+                Ingresá tu nombre de usuario y te enviaremos una solicitud de recuperación.
+              </DialogDescription>
+            </DialogHeader>
+
+            {forgotSent ? (
+              <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-sm font-medium text-emerald-800">Solicitud enviada correctamente.</p>
+                <p className="mt-1 text-xs text-emerald-700">
+                  Nuestro equipo la revisará y se pondrá en contacto con vos.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPasswordSubmit} className="mt-5 space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="forgot-username" className="text-gray-800 font-semibold text-sm">
+                    Nombre de usuario
+                  </Label>
+                  <Input
+                    id="forgot-username"
+                    value={forgotUserName}
+                    onChange={(e) => setForgotUserName(e.target.value)}
+                    placeholder="Ej: juan.perez"
+                    autoComplete="username"
+                    className="h-11 rounded-xl"
+                    disabled={forgotLoading}
+                  />
+                </div>
+
+                <DialogFooter className="pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => setForgotModalOpen(false)}
+                    disabled={forgotLoading}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="rounded-xl"
+                    style={{ background: "#e84620" }}
+                    disabled={forgotLoading}
+                  >
+                    {forgotLoading ? "Enviando..." : "Enviar solicitud"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
