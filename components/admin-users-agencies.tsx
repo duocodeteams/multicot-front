@@ -316,18 +316,30 @@ export function AdminUsersAgencies() {
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Vendedores y Agencias</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Gestiona vendedores y agencias del sistema
-          </p>
-        </div>
-        <Button onClick={() => { fetchUsers(); fetchAgencies(); }} variant="outline" size="sm">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Actualizar
-        </Button>
-      </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+  {/* texto */}
+  <div className="min-w-0">
+    <h2 className="text-lg sm:text-2xl font-bold text-foreground truncate">
+      Vendedores y Agencias
+    </h2>
+    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+      Gestiona vendedores y agencias del sistema
+    </p>
+  </div>
+
+  {/* botón */}
+  <Button
+    onClick={() => { fetchUsers(); fetchAgencies(); }}
+    variant="outline"
+    size="sm"
+    className="w-full sm:w-auto justify-center"
+  >
+    <RefreshCw className="h-4 w-4 mr-2" />
+    Actualizar
+  </Button>
+
+</div>
 
       <Tabs defaultValue="users" className="w-full">
         <TabsList>

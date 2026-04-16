@@ -10,7 +10,7 @@ function AppContent() {
   // Mostrar loading mientras se verifica la sesión
   if (isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-screen items-center justify-center overflow-x-hidden">
         <div className="h-8 w-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     )

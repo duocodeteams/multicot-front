@@ -35,6 +35,8 @@ export type Plan = {
   coverage: string[]
   maxCoverage: string
   empresaCotizacion: string
+  exceptions: string[]
+  companyRaw: string
   imagen?: string
   exchange_rate?: number // TC ARS/USD si el back lo manda
 }
@@ -76,6 +78,7 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
       const price = parseNumber(planData.final_rate_usd ?? planData.final_rate, 0)
       const coverageAmount = parseNumber(planData.coverage_amount, 0)
       const benefits = Array.isArray(planData.benefits) ? planData.benefits : []
+      const exceptions = Array.isArray(planData.exceptions) ? planData.exceptions : []
 
       const coverage = benefits
         .map((benefit: any) => {
@@ -97,14 +100,16 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
       }
 
       return {
-        id: planData.id ?? planData.plan_id ?? `plan-${Math.random()}`,
+        id: planData.plan_id,
         name: planData.plan_name ?? planData.plan ?? "Plan",
         price,
         pricePerDay: days > 0 ? Math.round(price / days) : price,
         badge: null,
         coverage,
+        exceptions,
         maxCoverage: `USD ${formatNumber(coverageAmount)}`,
         empresaCotizacion: mapCompanyToFormalCompany(planData.company ?? "Compañía"),
+        companyRaw: planData.company ?? "Compañía",
         imagen: planData.imagen,
         exchange_rate: planData.exchange_rate ? parseFloat(planData.exchange_rate) : undefined,
       } satisfies Plan
@@ -126,7 +131,7 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
       cotizacionesEmpresa.forEach((cotizacion: any) => {
         const price = parseNumber(cotizacion.totalUsd ?? cotizacion.tarifaApi, 0)
         const prestaciones = Array.isArray(cotizacion.prestaciones) ? cotizacion.prestaciones : []
-
+        const exceptions = Array.isArray(cotizacion.exclussions) ? cotizacion.exclussions : []
         const coverage = Array.from(
           new Set(
             prestaciones
@@ -137,6 +142,8 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
               .filter((c: string) => c !== "")
           )
         ) as string[]
+
+
 
         if (coverage.length === 0) {
           coverage.push("Asistencia médica")
@@ -150,8 +157,10 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
           pricePerDay: days > 0 ? Math.round(price / days) : price,
           badge: null,
           coverage,
+          exceptions,
           maxCoverage: `USD ${formatNumber(parseNumber(cotizacion.montoCobertura, 0))}`,
           empresaCotizacion: cotizacion.empresaCotizacion ?? empresa,
+          companyRaw: cotizacion.empresaCotizacion ?? empresa,
           imagen: cotizacion.imagen,
           exchange_rate: cotizacion.exchange_rate ? parseFloat(cotizacion.exchange_rate) : undefined,
         })
@@ -191,7 +200,12 @@ function generatePlans(data: QuotationData): Plan[] {
         "Cancelación de viaje",
         "Asistencia telefónica 24/7",
       ],
+      exceptions: [
+        "No cubre deportes de aventura",
+        "No cubre COVID-19",
+      ],
       empresaCotizacion: "Biant Seguros",
+      companyRaw: "Biant Seguros",
     },
     {
       id: "plus",
@@ -208,7 +222,12 @@ function generatePlans(data: QuotationData): Plan[] {
         "Asistencia telefónica 24/7",
         "Cobertura COVID-19",
       ],
+      exceptions: [
+        "No cubre aventura extrema",
+        "Preexistencias hasta USD 5.000",
+      ],
       empresaCotizacion: "Biant Seguros",
+      companyRaw: "Biant Seguros",
     },
     {
       id: "premium",
@@ -227,7 +246,12 @@ function generatePlans(data: QuotationData): Plan[] {
         "Preexistencias hasta USD 10.000",
         "Repatriación sanitaria",
       ],
+      exceptions: [
+        "No cubre actividades ilegales",
+        "No cubre daños a terceros",
+      ],
       empresaCotizacion: "Biant Seguros",
+      companyRaw: "Biant Seguros",
     },
   ]
 }
@@ -290,25 +314,25 @@ export type CompanyTheme = {
 }
 
 const COMPANY_THEMES: Record<string, CompanyTheme> = {
-  "pax assistance": {
+  "pax": {
     barFrom: "#400099", barTo: "#e81eb2", labelColor: "#400099",
     priceBg: "rgba(64,0,153,0.05)", priceBorder: "rgba(64,0,153,0.18)",
     dotColor: "#400099", btnBg: "linear-gradient(to right,#400099,#e81eb2)", btnText: "#ffffff",
     logo: "/paxlogo.png",
   },
-  "cardinal assistance": {
+  "cardinal": {
     barFrom: "#e60252", barTo: "#f29100", labelColor: "#c46d00",
     priceBg: "rgba(242,145,0,0.08)", priceBorder: "rgba(242,145,0,0.28)",
     dotColor: "#f29100", btnBg: "linear-gradient(to right,#e60252,#f29100)", btnText: "#ffffff",
     logo: "/cardinallogo.png",
   },
-  "go assistance": {
+  "goassistance": {
     barFrom: "#0a68ff", barTo: "#ef08ff", labelColor: "#7738ff",
     priceBg: "rgba(119,56,255,0.05)", priceBorder: "rgba(119,56,255,0.18)",
     dotColor: "#7738ff", btnBg: "linear-gradient(to right,#0a68ff,#ef08ff)", btnText: "#ffffff",
     logo: "/gologo.png",
   },
-  "inter assist": {
+  "interassist": {
     barFrom: "#9cc45c", barTo: "#5a8a2a", labelColor: "#3d6018",
     priceBg: "rgba(90,138,42,0.06)", priceBorder: "rgba(90,138,42,0.18)",
     dotColor: "#5a8a2a", btnBg: "linear-gradient(to right,#9cc45c,#5a8a2a)", btnText: "#ffffff",
@@ -320,13 +344,13 @@ const COMPANY_THEMES: Record<string, CompanyTheme> = {
     dotColor: "#007cba", btnBg: "linear-gradient(to right,#007cba,#223e66)", btnText: "#ffffff",
     logo: "/terrawindlogo.png",
   },
-  "universal assistance": {
+  "universal": {
     barFrom: "#002447", barTo: "#004d8f", labelColor: "#002447",
     priceBg: "rgba(0,36,71,0.05)", priceBorder: "rgba(0,36,71,0.18)",
     dotColor: "#004d8f", btnBg: "linear-gradient(to right,#002447,#004d8f)", btnText: "#ffffff",
     logo: "/universallogo.png",
   },
-  "new travel assistance": {
+  "newtravelassistance": {
     barFrom: "#016b91", barTo: "#5bbec2", labelColor: "#015a79",
     priceBg: "rgba(1,107,145,0.06)", priceBorder: "rgba(1,107,145,0.18)",
     dotColor: "#016b91", btnBg: "linear-gradient(to right,#016b91,#5bbec2)", btnText: "#ffffff",
@@ -360,6 +384,7 @@ export const PALETTE = GENERIC_PALETTE
 
 export function getCompanyTheme(company: string): CompanyTheme {
   const key = company.toLowerCase().trim()
+  console.log("Asignando tema para compañía:", company)
   if (key in COMPANY_THEMES) return COMPANY_THEMES[key]
   const canonical = COMPANY_ALIASES[key]
   if (canonical && canonical in COMPANY_THEMES) return COMPANY_THEMES[canonical]
@@ -453,7 +478,7 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
           </p>
         </div>
         {onCompare && plans.length >= 2 && (
-          <Button variant="outline" size="sm" onClick={() => onCompare(plans)} className="shrink-0 gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => onCompare(plans)} className="shrink-0 gap-1.5 hidden md:flex">
             <GitCompareArrows className="h-4 w-4" />
             Comparar planes
           </Button>
@@ -570,9 +595,10 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
       {/* ── Tarjetas de planes ── */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
         {plans.map((plan) => {
-          const theme = getCompanyTheme(plan.empresaCotizacion)
+          const theme = getCompanyTheme(plan.companyRaw)
           const visibleBenefits = plan.coverage.slice(0, 4)
           const extraCount = plan.coverage.length - 4
+          const exceptionsCount = plan.exceptions.length
 
           return (
             <div
@@ -621,7 +647,7 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                   <div className="flex  gap-2">
                     <span
                       className="text-[12px] underline font-bold uppercase tracking-widest mb-0.5"
-                    
+
                     >
                       USD
                     </span>
@@ -630,7 +656,7 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                     </span>
                   </div>
 
-              
+
                 </div>
 
                 {/* Divisor + fila inferior: ARS y TC solo si hay exchange_rate */}
@@ -679,13 +705,41 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
 
               {/* Más prestaciones */}
               {extraCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => handleViewDetails(plan)}
-                  className="mx-4 mb-3.5 text-left text-[11.5px] font-medium text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-                >
-                  +{extraCount} prestación{extraCount > 1 ? "es" : ""} más
-                </button>
+
+                <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1 py-2">
+                  <button
+                    type="button"
+                    onClick={() => handleViewDetails(plan)}
+                    className="text-[11.5px] font-medium text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                  >
+                    +{extraCount} prestación{extraCount > 1 ? "es" : ""} más
+                  </button>
+
+                  {exceptionsCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handleViewDetails(plan)}
+                      className="flex items-center gap-1 text-[11.5px] font-medium text-amber-600/80 hover:text-amber-700 transition-colors"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="size-3 shrink-0"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
+                      {exceptionsCount} exclusión{exceptionsCount > 1 ? "es" : ""}
+                    </button>
+                  )}
+                </div>
+
               ) : (
                 <div className="mb-3.5" />
               )}
@@ -837,6 +891,63 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                         </li>
                       ))}
                     </ul>
+
+                    { /* Exclusiones */}
+                    {selectedPlan.exceptions.length > 0 && (
+                      <>
+                        <div className="flex items-center gap-2">
+                          <div className="h-px flex-1 bg-border/60" />
+                          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+                            Exclusiones ({selectedPlan.exceptions.length})
+                          </span>
+                          <div className="h-px flex-1 bg-border/60" />
+                        </div>
+
+                        <div className="rounded-xl border border-amber-200/60 bg-amber-50/40 dark:bg-amber-950/20 dark:border-amber-800/30 px-4 py-3 space-y-2">
+                          <p className="text-[11px] text-amber-700/70 dark:text-amber-400/70 font-medium">
+                            Este plan no cubre las siguientes situaciones:
+                          </p>
+                          <ul className="flex flex-col gap-2">
+                            {selectedPlan.exceptions.map((item: any, index: number) => {
+                              const name = typeof item === "string" ? item : item?.benefit_name ?? item?.name ?? ""
+                              const desc = typeof item === "object" ? item?.description ?? "" : ""
+                              return (
+                                <li
+                                  key={`detail-${selectedPlan.id}-exc-${index}`}
+                                  className="flex items-start gap-2.5"
+                                >
+                                  <span className="h-[18px] w-[18px] rounded-full flex items-center justify-center shrink-0 mt-[1px] bg-amber-100 dark:bg-amber-900/40">
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-2.5 w-2.5 text-amber-600 dark:text-amber-400"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <line x1="18" y1="6" x2="6" y2="18" />
+                                      <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                  </span>
+                                  <div className="flex flex-col gap-0.5">
+                                    <span className="text-[13px] text-amber-900/75 dark:text-amber-300/75 leading-snug font-medium">
+                                      {name}
+                                    </span>
+                                    {desc && (
+                                      <span className="text-[11px] text-amber-700/55 dark:text-amber-400/55 leading-snug">
+                                        {desc}
+                                      </span>
+                                    )}
+                                  </div>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      </>
+                    )}
 
                     {/* Detalles del viaje */}
                     <div className="flex items-center gap-2">

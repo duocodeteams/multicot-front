@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { CalendarIcon, Plus, Trash2, ArrowRight, Plane, Users, Globe } from "lucide-react"
 import { format, startOfDay, isBefore, differenceInDays, addDays } from "date-fns"
 import { es } from "date-fns/locale"
@@ -174,26 +174,47 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
     }
   }
 
+
+ function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 768px)")
+    const listener = () => setIsMobile(media.matches)
+
+    listener()
+    media.addEventListener("change", listener)
+
+    return () => media.removeEventListener("change", listener)
+  }, [])
+
+  return isMobile
+}
+
+// 👇 ACÁ SÍ lo usás
+const isMobile = useIsMobile()
+
   return (
     <Card className="border-border overflow-hidden">
       {/* Barra de acento superior */}
       <div className="h-1 bg-gradient-to-r from-primary via-primary/70 to-accent" />
 
-      <CardHeader className="pb-2 pt-4 px-5">
-        <div className="flex items-center gap-2.5">
+      <CardHeader className="pb-2 pt-4 px-4 sm:px-5">
+        <div className="flex items-start gap-2.5 sm:items-center">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
             <Plane className="h-4 w-4 text-primary" />
           </div>
           <div>
             <CardTitle className="text-base text-foreground">Nueva Cotización</CardTitle>
-            <CardDescription className="text-xs">
+            <CardDescription className="text-xs leading-tight">
               Complete los datos del viaje para obtener las mejores opciones de asistencia.
             </CardDescription>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="px-5 pb-5">
+
+      <CardContent className="px-4 sm:px-5 pb-5">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
           {/* ── Sección 1: Destino ── */}
@@ -205,7 +226,7 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
                 Destino del viaje
               </h3>
             </div>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="destino" className="text-foreground text-xs font-medium">
                   Destino
@@ -304,7 +325,7 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
                 <div className="p-3">
                   <Calendar
                     mode="range"
-                    numberOfMonths={2}
+                    numberOfMonths={isMobile ? 1 : 2}
                     selected={tempRange}
                     onSelect={handleSelectRange}
                     disabled={(date) => {

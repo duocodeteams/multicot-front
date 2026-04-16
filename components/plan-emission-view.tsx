@@ -279,7 +279,7 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
           </div>
 
           {/* Botones de descarga de documentos */}
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 hidden sm:grid-cols-2">
             <Button
               variant="outline"
               className="w-full justify-start gap-2"

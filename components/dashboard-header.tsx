@@ -4,6 +4,7 @@ import { useState } from "react"
 import { LogOut, User, ChevronRight } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,15 +28,15 @@ type ViewState =
   | "admin-management"
 
 const VIEW_TITLES: Record<string, { label: string; section?: string }> = {
-  form:                   { label: "Nueva Cotización",      section: "Cotizador" },
-  loading:                { label: "Procesando...",          section: "Cotizador" },
-  results:                { label: "Resultados",             section: "Cotizador" },
-  emission:               { label: "Emitir Plan",           section: "Cotizador" },
-  settings:               { label: "Configuración" },
-  "admin-users-agencies": { label: "Usuarios y Agencias",   section: "Administración" },
-  "admin-create-agency":  { label: "Crear Agencia",         section: "Administración" },
-  "admin-create-user":    { label: "Crear Vendedor",        section: "Administración" },
-  "admin-management":     { label: "Panel de Administración", section: "Administración" },
+  form: { label: "Nueva Cotización", section: "Cotizador" },
+  loading: { label: "Procesando...", section: "Cotizador" },
+  results: { label: "Resultados", section: "Cotizador" },
+  emission: { label: "Emitir Plan", section: "Cotizador" },
+  settings: { label: "Configuración" },
+  "admin-users-agencies": { label: "Usuarios y Agencias", section: "Administración" },
+  "admin-create-agency": { label: "Crear Agencia", section: "Administración" },
+  "admin-create-user": { label: "Crear Vendedor", section: "Administración" },
+  "admin-management": { label: "Panel de Administración", section: "Administración" },
 }
 
 type DashboardHeaderProps = {
@@ -55,7 +56,7 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
       toast.success("Sesión cerrada", {
         description: "Has cerrado sesión correctamente",
       })
-    } catch (error) {
+    } catch {
       toast.error("Error al cerrar sesión", {
         description: "Error al cerrar sesión",
       })
@@ -75,107 +76,118 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
   }
 
   return (
-    <header className="flex h-24 shrink-0 items-center justify-between border-b border-border bg-card px-0 shadow-sm shadow-black/5">
+    <header className="w-full max-w-full overflow-hidden bg-blue-900 flex h-16 md:h-20 items-center justify-between border-b border-border bg-card px-3 md:px-6 shadow-sm">
 
-      {/* Izquierda: logos + breadcrumb */}
-      <div className="flex items-center min-w-0">
-        {/* Carril guía: mismo ancho que la barra colapsada del sidebar (3rem) */}
-        <div className="w-12 shrink-0" />
-        <Separator orientation="vertical" className="h-10" />
+      {/* IZQUIERDA */}
+      <div className="flex items-center min-w-0 gap-2 md:gap-4">
 
-        <div className="flex items-center gap-3 pl-4">
-          {/* Contenedor de logos */}
-          <div className="flex items-center gap-3.5 rounded-xl bg-white px-4 py-2.5 shadow-sm ring-1 ring-gray-100 shrink-0">
-            <img
-              src="/portal/biantlogosf.png"
-              alt="Biant"
-              className="h-14 w-14 object-cover"
-            />
-            <div className="w-px h-10 bg-gray-200" />
-            <img
-              src="/portal/biantsinfondo.png"
-              alt="Biant Travel"
-              className="h-12 w-auto max-w-[220px] object-cover"
-            />
+        {/* espacio sidebar */}
+       
+
+        {/* BOTÓN SIDEBAR (mobile) */}
+        <div className="flex items-center ">
+          <div className="md:hidden">
+            <SidebarTrigger className="h-9 w-9" />
           </div>
 
-          <Separator orientation="vertical" className="h-5" />
-
-          <nav className="flex items-center gap-1 text-sm">
-            {viewInfo.section && (
-              <>
-                <span className="text-muted-foreground/70 font-medium">{viewInfo.section}</span>
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40" />
-              </>
-            )}
-            <span className="font-semibold text-foreground">{viewInfo.label}</span>
-          </nav>
+          {/* espacio solo en desktop */}
+          <div className="hidden md:block w-12 shrink-0" />
         </div>
+
+        {/* LOGOS (solo desktop) */}
+        <div className="hidden md:flex items-center gap-3 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-gray-100 shrink-0">
+          <img
+            src="/portal/biantlogosf.png"
+            alt="Biant"
+            className="h-10 w-10 object-cover shrink-0"
+          />
+          <div className="w-px h-8 bg-gray-200 shrink-0" />
+          <img
+            src="/portal/biantsinfondo.png"
+            alt="Biant Travel"
+            className="h-10 w-auto max-w-[140px] object-contain"
+          />
+        </div>
+
+        {/* breadcrumb */}
+        <nav className="flex items-center gap-1 text-xs md:text-sm min-w-0">
+          {viewInfo.section && (
+            <>
+              <span className="text-muted-foreground/70 truncate">
+                {viewInfo.section}
+              </span>
+              <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+            </>
+          )}
+          <span className="font-semibold text-foreground truncate">
+            {viewInfo.label}
+          </span>
+        </nav>
       </div>
 
-      {/* Derecha: usuario con dropdown */}
-      <div className="pr-4">
+      {/* DERECHA */}
+      <div className="flex items-center shrink-0">
         <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="flex items-center gap-2 px-2 h-10 rounded-lg hover:bg-accent/60"
-          >
-            <Avatar className="h-7 w-7">
-              <AvatarFallback className="bg-primary text-primary-foreground text-[11px] font-bold">
-                {getInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="hidden flex-col items-start md:flex">
-              <span className="text-sm font-medium text-foreground leading-tight">
-                {user?.nombre || user?.email?.split("@")[0] || "Usuario"}
-              </span>
-              <span className="text-[11px] text-muted-foreground leading-tight">
-                {user?.agenciaId ? `Agencia #${user.agenciaId}` : "Sin agencia"}
-              </span>
-            </div>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-60">
-          <DropdownMenuLabel className="font-normal pb-2">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="bg-primary text-primary-foreground text-sm font-bold">
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 px-2 h-9 rounded-lg"
+            >
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="bg-primary text-primary-foreground text-[11px] font-bold">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col gap-0.5">
-                <p className="text-sm font-semibold text-foreground">
-                  {user?.nombre || user?.email || "Usuario"}
-                </p>
-                <p className="text-xs text-muted-foreground">{user?.email || "Sin email"}</p>
-                {user?.role !== undefined && (
-                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary w-fit mt-0.5">
-                    {String(user.role).toLowerCase() === "admin" || String(user.role) === "1"
-                      ? "Admin"
-                      : String(user.role).toLowerCase() === "agency" || String(user.role) === "2"
-                      ? "Agencia"
-                      : "Vendedor"}
-                  </span>
-                )}
+
+              {/* oculto en mobile */}
+              <div className="hidden md:flex flex-col items-start leading-tight">
+                <span className="text-sm font-medium text-foreground truncate max-w-[140px]">
+                  {user?.nombre || user?.email?.split("@")[0] || "Usuario"}
+                </span>
+                <span className="text-[11px] text-muted-foreground truncate">
+                  {user?.agenciaId ? `Agencia #${user.agenciaId}` : "Sin agencia"}
+                </span>
               </div>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem className="gap-2">
-            <User className="h-4 w-4" />
-            Mi Perfil
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
-          >
-            <LogOut className="h-4 w-4" />
-            {isLoggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
+            </Button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" className="w-60">
+            <DropdownMenuLabel className="font-normal pb-2">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm font-bold">
+                    {getInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {user?.nombre || user?.email || "Usuario"}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user?.email || "Sin email"}
+                  </p>
+                </div>
+              </div>
+            </DropdownMenuLabel>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem className="gap-2">
+              <User className="h-4 w-4" />
+              Mi Perfil
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+            >
+              <LogOut className="h-4 w-4" />
+              {isLoggingOut ? "Cerrando sesión..." : "Cerrar sesión"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
         </DropdownMenu>
       </div>
 
