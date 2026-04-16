@@ -2014,11 +2014,6 @@ body {
   background-color: rgb(239 68 68 / var(--tw-bg-opacity, 1));
 }
 
-.bg-red-900 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(127 29 29 / var(--tw-bg-opacity, 1));
-}
-
 .bg-secondary {
   background-color: hsl(var(--secondary));
 }
@@ -3366,6 +3361,10 @@ body {
 .focus\:border-\[\#282f78\]:focus {
   --tw-border-opacity: 1;
   border-color: rgb(40 47 120 / var(--tw-border-opacity, 1));
+}
+
+.focus\:border-destructive:focus {
+  border-color: hsl(var(--destructive));
 }
 
 .focus\:border-ring:focus {

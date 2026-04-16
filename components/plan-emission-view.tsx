@@ -1,21 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import {
-  ArrowLeft,
-  Check,
-  Copy,
-  Eye,
-  EyeOff,
-  ExternalLink,
-  Globe,
-  KeyRound,
-  User,
-  CheckCircle2,
-  Shield,
-  FileText,
-  ScrollText,
-} from "lucide-react"
+import { ArrowLeft, ExternalLink, Globe, CheckCircle2, Shield, FileText, ScrollText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -36,11 +21,6 @@ export type SelectedPlan = {
   tarifaTotalUnPago: number
   tarifaNeta: number
   totalUsd: number
-  // Credenciales del portal de emisión
-  portalUrl?: string
-  portalUser?: string
-  portalPassword?: string
-  // URLs de documentos descargables
   pdfDetallePlan?: string
   pdfCondicionesGenerales?: string
 }
@@ -48,8 +28,8 @@ export type SelectedPlan = {
 type PlanEmissionViewProps = {
   plan: SelectedPlan
   quotationData: QuotationData
-  onBack: () => void // Vuelve a los resultados (planes cotizados)
-  onBackToForm?: () => void // Vuelve al formulario (inicio)
+  onBack: () => void
+  onBackToForm?: () => void
 }
 
 // ── Helpers ───────────────────────────────────────────────
@@ -65,82 +45,12 @@ const destinationLabels: Record<string, string> = {
   "1002": "Nacional",
 }
 
-// ── Subcomponente: campo de credencial ────────────────────
-function CredentialField({
-  icon: Icon,
-  label,
-  value,
-  isPassword = false,
-  isLink = false,
-}: {
-  icon: React.ElementType
-  label: string
-  value: string
-  isPassword?: boolean
-  isLink?: boolean
-}) {
-  const [visible, setVisible] = useState(false)
-  const [copied, setCopied] = useState(false)
-
-  const displayValue = isPassword && !visible ? "•".repeat(Math.min(value.length, 12)) : value
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(value)
-      setCopied(true)
-      toast.success(`${label} copiado`)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      toast.error("No se pudo copiar")
-    }
-  }
-
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-        <Icon className="h-3 w-3" />
-        {label}
-      </span>
-      <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2.5">
-        <span className="flex-1 text-sm font-mono font-medium text-foreground break-all select-all">
-          {displayValue}
-        </span>
-        {isPassword && (
-          <button
-            type="button"
-            onClick={() => setVisible((v) => !v)}
-            className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
-            aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
-          >
-            {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
-          aria-label={`Copiar ${label}`}
-        >
-          {copied ? (
-            <Check className="h-4 w-4 text-green-500" />
-          ) : (
-            <Copy className="h-4 w-4" />
-          )}
-        </button>
-      </div>
-      {isLink && (
-        <a
-          href={value.startsWith("http") ? value : `https://${value}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-primary hover:text-primary/80 underline underline-offset-2 flex items-center gap-1 w-fit transition-colors cursor-pointer"
-        >
-          Abrir en nueva pestaña
-          <ExternalLink className="h-3 w-3" />
-        </a>
-      )}
-    </div>
-  )
+// 🔥 Mapeo de compañía → URL
+const portalUrls: Record<string, string> = {
+  cardinalassistance: "https://evoucher.cardinalassistance.com/bo/login",
+  universalassistance: "https://ar.ec.universal-assistance.com/Emision/Login",
+  newtravelassistance: "https://newtravelassistance.page/app/pages/login.php",
+  goassistance: "https://back.goassistance.com/v3/Ingresar?ReturnUrl=%2Fv3%2F",
 }
 
 // ── Componente principal ──────────────────────────────────
@@ -151,11 +61,16 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
 
   const formatDate = (date: Date) =>
     date.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })
-
-  const portalUrl = plan.portalUrl || "portal.biantseguros.com"
-  const portalUser = plan.portalUser || "—"
-  const portalPassword = plan.portalPassword || "—"
-  const hasCredentials = plan.portalUrl || plan.portalUser || plan.portalPassword
+ const normalizeCompany = (str: string) =>
+  str
+    .toLowerCase()
+    .normalize("NFD") // elimina acentos
+    .replace(/[\u0300-\u036f]/g, "") // limpia diacríticos
+    .replace(/[^a-z0-9]/g, "") // elimina TODO lo que no sea alfanumérico
+  // Normalizamos el nombre de la compañía
+  const empresaKey = normalizeCompany(plan.empresaCotizacion)
+  console.log('empresa', empresaKey)
+  const portalUrl = portalUrls[empresaKey]
 
   const handleDownloadPdf = (url?: string, fileName?: string) => {
     if (!url) {
@@ -182,7 +97,7 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
             Plan seleccionado
           </h2>
           <p className="text-xs text-muted-foreground">
-            Usá las credenciales del portal para emitir este plan
+            Accedé al portal de la compañía para emitir este plan
           </p>
         </div>
       </div>
@@ -229,9 +144,9 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
         </CardHeader>
 
         <CardContent className="flex flex-col gap-4">
-          {/* Precio + datos del viaje */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {/* Bloque de precio — solo PVP */}
+
+            {/* Precio */}
             <div className="rounded-lg bg-primary/8 border border-primary/15 p-4">
               <p className="text-xs text-muted-foreground mb-1">Precio de venta (PVP)</p>
               <p className="text-3xl font-bold text-foreground">
@@ -278,7 +193,7 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
             </div>
           </div>
 
-          {/* Botones de descarga de documentos */}
+          {/* PDFs */}
           <div className="grid grid-cols-1 gap-2 hidden sm:grid-cols-2">
             <Button
               variant="outline"
@@ -294,7 +209,7 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
               variant="outline"
               className="w-full justify-start gap-2"
               onClick={() =>
-                handleDownloadPdf(plan.pdfCondicionesGenerales, `Condiciones_Generales_${plan.empresaCotizacion.replace(/\s+/g, "_")}.pdf`)
+                handleDownloadPdf(plan.pdfCondicionesGenerales, `Condiciones_${plan.empresaCotizacion}.pdf`)
               }
             >
               <ScrollText className="h-4 w-4 text-primary shrink-0" />
@@ -304,65 +219,46 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
         </CardContent>
       </Card>
 
-      {/* ── Credenciales del portal ── */}
+      {/* ── Portal ── */}
       <Card className="overflow-hidden border-border">
         <div className="h-1 bg-gradient-to-r from-accent/80 to-accent/40" />
         <CardHeader className="pb-3 pt-4">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 shrink-0">
-              <KeyRound className="h-4 w-4 text-accent" />
+              <Globe className="h-4 w-4 text-accent" />
             </div>
             <div>
-              <CardTitle className="text-base text-foreground">Acceso al portal de emisión</CardTitle>
+              <CardTitle className="text-base text-foreground">Portal de emisión</CardTitle>
               <p className="text-xs text-muted-foreground">
-                Ingresá con estas credenciales para emitir el plan
+                Serás redirigido al portal de la compañía
               </p>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-3">
-            <CredentialField
-              icon={Globe}
-              label="URL del portal"
-              value={portalUrl}
-              isLink
-            />
-            <CredentialField
-              icon={User}
-              label="Usuario"
-              value={portalUser}
-            />
-            <CredentialField
-              icon={KeyRound}
-              label="Contraseña"
-              value={portalPassword}
-              isPassword
-            />
-          </div>
 
-          {!hasCredentials && (
+        <CardContent className="flex flex-col gap-4">
+          {portalUrl ? (
+            <>
+              <div className="text-sm font-mono bg-muted/40 border border-border rounded-lg px-3 py-2 break-all">
+                {portalUrl}
+              </div>
+
+              <a href={portalUrl} target="_blank" rel="noopener noreferrer">
+                <Button className="w-full" size="lg">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Ir al portal
+                </Button>
+              </a>
+            </>
+          ) : (
             <p className="text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2 border border-dashed border-border">
-              ⚠️ Las credenciales del portal aún no están configuradas para esta compañía.
-              Contactá a tu administrador.
+              ⚠️ No hay portal configurado para esta compañía.
             </p>
           )}
-
-          <a
-            href={portalUrl.startsWith("http") ? portalUrl : `https://${portalUrl}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block"
-          >
-            <Button className="w-full" size="lg">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Ir al portal de emisión
-            </Button>
-          </a>
         </CardContent>
       </Card>
 
-      {/* ── Pie: volver ── */}
+      {/* ── Volver ── */}
       <div className="flex justify-center pb-2">
         <Button
           variant="ghost"

@@ -384,7 +384,6 @@ export const PALETTE = GENERIC_PALETTE
 
 export function getCompanyTheme(company: string): CompanyTheme {
   const key = company.toLowerCase().trim()
-  console.log("Asignando tema para compañía:", company)
   if (key in COMPANY_THEMES) return COMPANY_THEMES[key]
   const canonical = COMPANY_ALIASES[key]
   if (canonical && canonical in COMPANY_THEMES) return COMPANY_THEMES[canonical]
@@ -434,10 +433,20 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
   const days = Math.ceil((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)) || 1
 
   const allPlans = generatePlansFromBackend(backendResponse, days) || generatePlans(data)
-  const availableCompanies = Array.from(new Set(allPlans.map((p) => p.empresaCotizacion))).sort()
+  const availableCompanies = Array.from(
+    new Map(
+      allPlans.map((p) => [
+        p.companyRaw,
+        {
+          key: p.companyRaw,
+          label: p.empresaCotizacion,
+        },
+      ])
+    ).values()
+  )
 
   const filteredByCompany = selectedCompanies.size > 0
-    ? allPlans.filter((p) => selectedCompanies.has(p.empresaCotizacion))
+    ? allPlans.filter((p) => selectedCompanies.has(p.companyRaw))
     : allPlans
 
   const plans = [...filteredByCompany].sort((a, b) => {
@@ -453,6 +462,18 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
   const handleViewDetails = (plan: Plan) => {
     setSelectedPlan(plan)
     setIsDialogOpen(true)
+  }
+
+  const toggleCompany = (companyRaw: string) => {
+    setSelectedCompanies((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(companyRaw)) {
+        newSet.delete(companyRaw)
+      } else {
+        newSet.add(companyRaw)
+      }
+      return newSet
+    })
   }
 
   const formatDateDisplay = (date: Date) =>
@@ -547,19 +568,13 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                   </div>
                   <div className="max-h-[200px] overflow-y-auto">
                     {availableCompanies.map((company) => (
-                      <label key={company} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer text-sm">
+                      <div key={company.key} className="flex items-center gap-2">
                         <Checkbox
-                          checked={selectedCompanies.has(company)}
-                          onCheckedChange={(checked) => {
-                            setSelectedCompanies((prev) => {
-                              const next = new Set(prev)
-                              checked ? next.add(company) : next.delete(company)
-                              return next
-                            })
-                          }}
+                          checked={selectedCompanies.has(company.key)}
+                          onCheckedChange={() => toggleCompany(company.key)}
                         />
-                        <span className="flex-1">{company}</span>
-                      </label>
+                        <span>{company.label}</span>
+                      </div>
                     ))}
                   </div>
                 </div>

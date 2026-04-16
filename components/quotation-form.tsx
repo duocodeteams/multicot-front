@@ -63,30 +63,27 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [tempRange, setTempRange] = useState<DateRange | undefined>()
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const [passengers, setPassengers] = useState<number[]>([30])
+const [passengers, setPassengers] = useState<string[]>(["30"])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const isMultiTrip = tipoViaje.startsWith("MULTI_TRIP")
 
-  const addPassenger = () => {
-    if (passengers.length < 10) {
-      setPassengers([...passengers, 30])
-    }
+const addPassenger = () => {
+  if (passengers.length < 10) {
+    setPassengers([...passengers, "30"])
   }
+}
 
-  const removePassenger = (index: number) => {
-    if (passengers.length > 1) {
-      setPassengers(passengers.filter((_, i) => i !== index))
-    }
+const removePassenger = (index: number) => {
+  if (passengers.length > 1) {
+    setPassengers(passengers.filter((_, i) => i !== index))
   }
+}
 
-  const updatePassengerAge = (index: number, age: string) => {
-    const numAge = parseInt(age, 10)
-    if (!isNaN(numAge) && numAge >= 0 && numAge <= 120) {
-      const updated = [...passengers]
-      updated[index] = numAge
-      setPassengers(updated)
-    }
-  }
+const updatePassengerAge = (index: number, age: string) => {
+  const updated = [...passengers]
+  updated[index] = age
+  setPassengers(updated)
+}
 
   const formatDate = (date: Date): string => {
     const year = date.getFullYear()
@@ -150,8 +147,14 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
     if (!tipoViaje) newErrors.tipoViaje = "Seleccione el tipo de viaje"
     if (!dateRange?.from) newErrors.dates = "Seleccione fecha de inicio"
     else if (!dateRange?.to) newErrors.dates = "Seleccione fecha de fin"
-    if (passengers.some((age) => age < 0 || age > 120)) {
-      newErrors.passengers = "Las edades deben estar entre 0 y 120"
+    
+    const ages = passengers.map(age => {
+      const numAge = parseInt(age, 10)
+      return isNaN(numAge) ? -1 : numAge
+    })
+    
+    if (ages.some((age) => age < 0 || age > 99)) {
+      newErrors.passengers = "Las edades deben estar entre 0 y 99 años"
     }
     if (passengers.length === 0) {
       newErrors.passengers = "Debe haber al menos un pasajero"
@@ -163,19 +166,23 @@ export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (validate() && dateRange?.from && dateRange?.to) {
+      const ages = passengers.map(age => {
+        const numAge = parseInt(age, 10)
+        return isNaN(numAge) ? "0" : String(Math.max(0, Math.min(99, numAge)))
+      })
       onSubmit({
         destino,
         tipoViaje,
         desde: formatDate(dateRange.from),
         hasta: formatDate(dateRange.to),
-        edades: passengers.map((age) => String(age)),
+        edades: ages,
         origen: "AR",
       })
     }
   }
 
 
- function useIsMobile() {
+function useIsMobile(): boolean {
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
@@ -320,7 +327,7 @@ const isMobile = useIsMobile()
             </Button>
 
             {/* Modal del calendario */}
-            <Dialog open={calendarOpen} onOpenChange={handleOpenCalendar}>
+            <Dialog open={calendarOpen} onOpenChange={(open) => handleOpenCalendar(!!open)}>
               <DialogContent className="w-auto max-w-fit gap-0 pt-8 px-0 pb-0">
                 <div className="p-3">
                   <Calendar
@@ -415,10 +422,13 @@ const isMobile = useIsMobile()
                     <Input
                       type="number"
                       min={0}
-                      max={120}
+                      max={99}
                       value={age}
                       onChange={(e) => updatePassengerAge(index, e.target.value)}
-                      className="bg-background cursor-text"
+                      className={cn(
+                        "bg-background cursor-text",
+                        errors.passengers && "border-destructive focus:border-destructive focus:ring-destructive"
+                      )}
                       aria-label={`Edad pasajero ${index + 1}`}
                     />
                     {passengers.length > 1 && (

@@ -1,0 +1,7 @@
+RewriteEngine On
+RewriteBase /portal/
+
+RewriteRule ^index\.html$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /portal/index.html [L]

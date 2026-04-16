@@ -55,33 +55,33 @@ apiClient.interceptors.response.use(
     // Manejo centralizado de errores
     if (error.response) {
       const status = error.response.status
-      
+
       // Si el token es inválido o expiró (401), limpiar autenticación
       if (status === 401) {
         if (typeof window !== "undefined") {
           localStorage.removeItem("auth_token")
           localStorage.removeItem("auth_refresh_token")
           localStorage.removeItem("auth_user")
-          // Redirigir al login si estamos en el cliente
-          window.location.href = "/"
         }
+
+        return Promise.reject(new Error("Credenciales inválidas o sesión expirada. Por favor, inicia sesión nuevamente."))
       }
-      
+
       // Si es 403 (Forbidden), puede ser por permisos insuficientes
       if (status === 403) {
-        const errorMessage = 
-          (error.response.data as any)?.message || 
+        const errorMessage =
+          (error.response.data as any)?.message ||
           (error.response.data as any)?.detail ||
-          (error.response.data as any)?.error || 
+          (error.response.data as any)?.error ||
           "No tienes permisos para realizar esta acción"
         return Promise.reject(new Error(errorMessage))
       }
-      
+
       // El servidor respondió con un código de estado fuera del rango 2xx
-      const errorMessage = 
-        (error.response.data as any)?.message || 
+      const errorMessage =
+        (error.response.data as any)?.message ||
         (error.response.data as any)?.detail ||
-        (error.response.data as any)?.error || 
+        (error.response.data as any)?.error ||
         "Error en la petición"
       return Promise.reject(new Error(errorMessage))
     } else if (error.request) {
@@ -100,8 +100,8 @@ apiClient.interceptors.response.use(
  */
 export function apiUrl(endpoint: string): string {
   const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`
-  const baseUrl = API_BASE_URL.endsWith("/") 
-    ? API_BASE_URL.slice(0, -1) 
+  const baseUrl = API_BASE_URL.endsWith("/")
+    ? API_BASE_URL.slice(0, -1)
     : API_BASE_URL
   return `${baseUrl}${normalizedEndpoint}`
 }

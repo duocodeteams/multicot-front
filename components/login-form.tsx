@@ -50,18 +50,31 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   })
 
   const onSubmit = async (data: LoginFormData) => {
+    if (loading) return
+
     setLoading(true)
+
     try {
       const success = await login(data.email, data.password)
+
       if (success) {
-        toast.success("¡Bienvenido a Biant!", { description: "Inicio de sesión exitoso" })
+        toast.success("¡Bienvenido a Biant!", {
+          description: "Inicio de sesión exitoso",
+        })
         onSuccess()
       } else {
-        toast.error("Credenciales incorrectas", { description: "Por favor verifica tu email y contraseña" })
+        toast.error("Credenciales incorrectas", {
+          description: "Email o contraseña inválidos",
+        })
       }
     } catch (error: any) {
+      console.error("LOGIN ERROR:", error)
+
       toast.error("Error al iniciar sesión", {
-        description: error.message || "Ocurrió un error inesperado. Intenta nuevamente.",
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Ocurrió un error inesperado",
       })
     } finally {
       setLoading(false)
@@ -251,7 +264,13 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSubmit(onSubmit)(e)
+              }}
+              className="space-y-5"
+            >
 
               {/* Email */}
               <div className="space-y-1.5">
@@ -265,11 +284,10 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
                     type="email"
                     placeholder="usuario@ejemplo.com"
                     {...register("email")}
-                    className={`h-11 bg-white border pl-10 text-sm text-gray-900 placeholder:text-gray-400 rounded-xl transition-all focus-visible:ring-2 ${
-                      errors.email
-                        ? "border-red-400 focus-visible:ring-red-100"
-                        : "border-gray-300 hover:border-gray-400 focus:border-[#282f78] focus-visible:ring-[#282f78]/10"
-                    }`}
+                    className={`h-11 bg-white border pl-10 text-sm text-gray-900 placeholder:text-gray-400 rounded-xl transition-all focus-visible:ring-2 ${errors.email
+                      ? "border-red-400 focus-visible:ring-red-100"
+                      : "border-gray-300 hover:border-gray-400 focus:border-[#282f78] focus-visible:ring-[#282f78]/10"
+                      }`}
                     autoComplete="email"
                   />
                 </div>
@@ -308,11 +326,10 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
                     type="password"
                     placeholder="••••••••"
                     {...register("password")}
-                    className={`h-11 bg-white border pl-10 text-sm text-gray-900 placeholder:text-gray-400 rounded-xl transition-all focus-visible:ring-2 ${
-                      errors.password
-                        ? "border-red-400 focus-visible:ring-red-100"
-                        : "border-gray-300 hover:border-gray-400 focus:border-[#282f78] focus-visible:ring-[#282f78]/10"
-                    }`}
+                    className={`h-11 bg-white border pl-10 text-sm text-gray-900 placeholder:text-gray-400 rounded-xl transition-all focus-visible:ring-2 ${errors.password
+                      ? "border-red-400 focus-visible:ring-red-100"
+                      : "border-gray-300 hover:border-gray-400 focus:border-[#282f78] focus-visible:ring-[#282f78]/10"
+                      }`}
                     autoComplete="current-password"
                   />
                 </div>
