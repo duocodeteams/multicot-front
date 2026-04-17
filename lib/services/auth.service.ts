@@ -21,6 +21,7 @@ export async function healthCheck(): Promise<HealthCheckResponse> {
  */
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
   const response = await apiClient.post<LoginResponse>("/v1/auth/login", credentials)
+  
   return response.data
 }
 

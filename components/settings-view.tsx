@@ -113,15 +113,7 @@ export function SettingsView() {
               </div>
             )}
 
-            <div className="flex items-start gap-3">
-              <Building2 className="h-4 w-4 text-muted-foreground mt-1" />
-              <div className="flex-1">
-                <Label className="text-xs text-muted-foreground">Agencia</Label>
-                <p className="text-sm font-medium text-foreground">
-                  {user?.agenciaId ? `Agencia #${user.agenciaId}` : "N/A"}
-                </p>
-              </div>
-            </div>
+        
 
             {user?.nacionalidad && (
               <div className="flex items-start gap-3">

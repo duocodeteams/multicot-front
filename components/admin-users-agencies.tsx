@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Users, Building2, Search, RefreshCw, Eye, EyeOff, KeyRound, Mail, User, Shield, Globe, Percent, Calendar, MapPin, FileText, Phone, CreditCard, Landmark, Briefcase } from "lucide-react"
+import { Users, Building2, Search, RefreshCw, Eye, EyeOff, KeyRound, Mail, User, Shield, Globe, Percent, Calendar, MapPin, FileText, Phone, CreditCard, Landmark, Briefcase, Clock, BadgeDollarSign } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -100,8 +100,7 @@ export function AdminUsersAgencies() {
       
       // Usar listSellers ya que no hay endpoint de usuarios generales
       const response = await listSellers({ limit: 100, offset: 0 })
-      console.log("[AdminUsersAgencies] Respuesta cruda listSellers:", response)
-      console.log("[AdminUsersAgencies] Primer seller:", response.items?.[0])
+    
       
       // Mapear sellers a la estructura de usuarios
       const mappedUsers: User[] = response.items.map((seller: SellerResponse) => ({
@@ -156,8 +155,7 @@ export function AdminUsersAgencies() {
       }
       
       const response = await listAgencies({ limit: 100, offset: 0 })
-      console.log("[AdminUsersAgencies] Respuesta cruda listAgencies:", response)
-      console.log("[AdminUsersAgencies] Primera agencia:", response.items?.[0])
+
       
       // Mapear agencias a la estructura esperada
       const mappedAgencies: Agency[] = response.items.map((agency: AgencyResponse) => ({
@@ -503,7 +501,7 @@ export function AdminUsersAgencies() {
                         <TableCell>{agency.nombre}</TableCell>
                         <TableCell>{agency.email || "N/A"}</TableCell>
                         <TableCell>{agency.telefono || "N/A"}</TableCell>
-                        <TableCell>{agency.direccion || "N/A"}</TableCell>
+                        <TableCell className="text-[11px]">{agency.direccion || "N/A"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             <Tooltip>
@@ -670,7 +668,8 @@ export function AdminUsersAgencies() {
               <section className="rounded-lg border p-3">
                 <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2"><CreditCard className="h-4 w-4 text-muted-foreground" />Facturación y pagos</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="font-semibold">Frecuencia facturación:</span>{" "}
                     {formatCatalogValue(selectedAgency.raw.billing_frequency, {
                       monthly: "Mensual",
@@ -678,7 +677,8 @@ export function AdminUsersAgencies() {
                       yearly: "Anual",
                     })}
                   </div>
-                  <div>
+                  <div className="flex items-center gap-2">
+                    <BadgeDollarSign className="h-4 w-4 text-muted-foreground"/>
                     <span className="font-semibold">Método de pago:</span>{" "}
                     {formatCatalogValue(selectedAgency.raw.payment_method, {
                       transfer: "Transferencia",

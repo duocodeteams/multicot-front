@@ -75,6 +75,8 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
     return "U"
   }
 
+
+
   return (
     <header className="w-full max-w-full overflow-hidden bg-blue-900 flex h-16 md:h-20 items-center justify-between border-b border-border bg-card px-3 md:px-6 shadow-sm">
 
@@ -141,12 +143,10 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
 
               {/* oculto en mobile */}
               <div className="hidden md:flex flex-col items-start leading-tight">
-                <span className="text-sm font-medium text-foreground truncate max-w-[140px]">
-                  {user?.nombre || user?.email?.split("@")[0] || "Usuario"}
+                <span className="text-sm font-medium text-foreground  min-w-[140px]">
+                  {user?.email || "Usuario"}
                 </span>
-                <span className="text-[11px] text-muted-foreground truncate">
-                  {user?.agenciaId ? `Agencia #${user.agenciaId}` : "Sin agencia"}
-                </span>
+               
               </div>
             </Button>
           </DropdownMenuTrigger>

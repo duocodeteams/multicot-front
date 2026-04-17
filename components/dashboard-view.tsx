@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
@@ -31,12 +31,7 @@ export function DashboardView() {
   const [plansToCompare, setPlansToCompare] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(false)
 
-  // Console.log de la respuesta del backend cuando el componente se monta
-  useEffect(() => {
-    if (loginResponse) {
-      console.log("Respuesta del backend (login):", loginResponse)
-    }
-  }, [loginResponse])
+
 
   const handleSubmit = async (data: QuotationData) => {
     setQuotationData(data)
@@ -52,7 +47,7 @@ export function DashboardView() {
 
       // Guardar la respuesta del backend
       setQuotationResponse(response)
-      console.log("Respuesta del backend (cotización):", response)
+      
       
       setView("results")
       toast.success("Cotización realizada", {

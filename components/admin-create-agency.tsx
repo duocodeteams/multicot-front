@@ -251,7 +251,7 @@ export function AdminCreateAgency() {
       // Usar el servicio de creación de agencias
       const response = await createAgency(payload)
       
-      console.log('Respuesta exitosa:', response)
+   
       
       toast.success("Agencia creada exitosamente", {
         description: `La agencia "${formData.name}" ha sido creada`,

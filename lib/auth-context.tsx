@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { login as loginService } from "./services"
+import {apiClient} from './api'
 
 type User = {
   id: number
@@ -72,12 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Usar el servicio de login
       const data = await loginService({ email, password })
-      
-      // Log completo de la respuesta para debugging
-      console.log("=== Respuesta completa del backend ===")
-      console.log("Data completa:", data)
-      console.log("=====================================")
-      
+   
       // Guardar la respuesta completa del backend
       setLoginResponse(data)
       

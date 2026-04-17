@@ -69,7 +69,7 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
     .replace(/[^a-z0-9]/g, "") // elimina TODO lo que no sea alfanumérico
   // Normalizamos el nombre de la compañía
   const empresaKey = normalizeCompany(plan.empresaCotizacion)
-  console.log('empresa', empresaKey)
+
   const portalUrl = portalUrls[empresaKey]
 
   const handleDownloadPdf = (url?: string, fileName?: string) => {
