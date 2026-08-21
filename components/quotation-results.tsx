@@ -24,6 +24,7 @@ import {
 import type { QuotationData } from "@/components/quotation-form"
 import type { SelectedPlan } from "@/components/plan-emission-view"
 import { mapCompanyToFormalCompany } from "@/lib/services/quotes.mapper"
+import { getCompanyLogo, getCompanyInitial, normalizeCompanyKey } from "@/lib/company-logo"
 
 // ── Tipo Plan — solo campos reales del backend ────────────
 export type Plan = {
@@ -43,6 +44,15 @@ export type Plan = {
 
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat("es-AR").format(num)
+}
+
+export function formatCurrencyARS(num: number): string {
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency: "ARS",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num)
 }
 
 function parseCoverageAmount(coverageStr: string): number {
@@ -267,29 +277,27 @@ export function QuotationResultsSkeleton() {
           ))}
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
-            <div className="h-[5px] bg-muted" />
-            <div className="p-4 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-2.5 w-2.5 rounded-full" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-                <Skeleton className="h-6 w-20 rounded-md" />
+          <div key={i} className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-sm">
+            <div className="h-0.5 bg-muted" />
+            <div className="p-4 sm:p-5 flex flex-col gap-4 sm:gap-5">
+              <Skeleton className="h-9 w-28 rounded-md" />
+              <div className="flex flex-col gap-1.5">
+                <Skeleton className="h-5 w-40" />
+                <Skeleton className="h-3 w-28" />
               </div>
-              <Skeleton className="h-5 w-40" />
-              <Skeleton className="h-14 w-full rounded" />
-              <div className="h-px bg-border/50" />
-              {[1, 2, 3].map((j) => (
-                <div key={j} className="flex items-start gap-2.5">
-                  <Skeleton className="h-[18px] w-[18px] rounded-full shrink-0" />
-                  <Skeleton className={`h-3.5 ${j === 3 ? "w-3/5" : "w-full"}`} />
-                </div>
-              ))}
-              <div className="flex gap-2 mt-auto">
-                <Skeleton className="h-10 w-20 rounded-xl" />
+              <Skeleton className="h-8 sm:h-9 w-32" />
+              <div className="flex flex-col gap-2.5 flex-1">
+                {[1, 2, 3].map((j) => (
+                  <div key={j} className="flex items-start gap-2.5">
+                    <Skeleton className="h-3.5 w-3.5 rounded-sm shrink-0 mt-0.5" />
+                    <Skeleton className={`h-3.5 ${j === 3 ? "w-3/5" : "w-full"}`} />
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 mt-auto pt-1">
+                <Skeleton className="h-10 w-10 sm:w-24 rounded-xl shrink-0" />
                 <Skeleton className="h-10 flex-1 rounded-xl" />
               </div>
             </div>
@@ -310,7 +318,6 @@ export type CompanyTheme = {
   dotColor: string
   btnBg: string
   btnText: string
-  logo: string
 }
 
 const COMPANY_THEMES: Record<string, CompanyTheme> = {
@@ -318,75 +325,68 @@ const COMPANY_THEMES: Record<string, CompanyTheme> = {
     barFrom: "#400099", barTo: "#e81eb2", labelColor: "#400099",
     priceBg: "rgba(64,0,153,0.05)", priceBorder: "rgba(64,0,153,0.18)",
     dotColor: "#400099", btnBg: "linear-gradient(to right,#400099,#e81eb2)", btnText: "#ffffff",
-    logo: "/paxlogo.png",
   },
   "cardinal": {
     barFrom: "#e60252", barTo: "#f29100", labelColor: "#c46d00",
     priceBg: "rgba(242,145,0,0.08)", priceBorder: "rgba(242,145,0,0.28)",
     dotColor: "#f29100", btnBg: "linear-gradient(to right,#e60252,#f29100)", btnText: "#ffffff",
-    logo: "/cardinallogo.png",
   },
   "goassistance": {
     barFrom: "#0a68ff", barTo: "#ef08ff", labelColor: "#7738ff",
     priceBg: "rgba(119,56,255,0.05)", priceBorder: "rgba(119,56,255,0.18)",
     dotColor: "#7738ff", btnBg: "linear-gradient(to right,#0a68ff,#ef08ff)", btnText: "#ffffff",
-    logo: "/gologo.png",
   },
   "interassist": {
     barFrom: "#9cc45c", barTo: "#5a8a2a", labelColor: "#3d6018",
     priceBg: "rgba(90,138,42,0.06)", priceBorder: "rgba(90,138,42,0.18)",
     dotColor: "#5a8a2a", btnBg: "linear-gradient(to right,#9cc45c,#5a8a2a)", btnText: "#ffffff",
-    logo: "/interlogo.png",
   },
   "terrawind": {
     barFrom: "#007cba", barTo: "#223e66", labelColor: "#005a8a",
     priceBg: "rgba(0,124,186,0.05)", priceBorder: "rgba(0,124,186,0.18)",
     dotColor: "#007cba", btnBg: "linear-gradient(to right,#007cba,#223e66)", btnText: "#ffffff",
-    logo: "/terrawindlogo.png",
   },
   "universal": {
     barFrom: "#002447", barTo: "#004d8f", labelColor: "#002447",
     priceBg: "rgba(0,36,71,0.05)", priceBorder: "rgba(0,36,71,0.18)",
     dotColor: "#004d8f", btnBg: "linear-gradient(to right,#002447,#004d8f)", btnText: "#ffffff",
-    logo: "/universallogo.png",
   },
   "newtravelassistance": {
     barFrom: "#016b91", barTo: "#5bbec2", labelColor: "#015a79",
     priceBg: "rgba(1,107,145,0.06)", priceBorder: "rgba(1,107,145,0.18)",
     dotColor: "#016b91", btnBg: "linear-gradient(to right,#016b91,#5bbec2)", btnText: "#ffffff",
-    logo: "/newtravellogo.png",
   },
 }
 
+// Claves ya normalizadas con normalizeCompanyKey (sin espacios ni signos)
 const COMPANY_ALIASES: Record<string, string> = {
-  "pax": "pax assistance", "pax assist": "pax assistance",
-  "cardinal": "cardinal assistance", "cardinal assist": "cardinal assistance",
-  "go": "go assistance", "goassistance": "go assistance", "go-assistance": "go assistance",
-  "inter": "inter assist", "interassist": "inter assist", "inter-assist": "inter assist",
-  "universal": "universal assistance",
-  "new travel": "new travel assistance", "newtravel": "new travel assistance",
-  "new travel assist": "new travel assistance", "new travel asistance": "new travel assistance",
-  "newtravel assistance": "new travel assistance", "newtravelassist": "new travel assistance",
+  "paxassistance": "pax", "paxassist": "pax",
+  "cardinalassistance": "cardinal", "cardinalassist": "cardinal",
+  "go": "goassistance", "goassist": "goassistance",
+  "inter": "interassist", "interassistance": "interassist",
+  "universalassistance": "universal",
+  "terrawindassistance": "terrawind", "terrawindglobalprotection": "terrawind",
+  "newtravel": "newtravelassistance", "newtravelassist": "newtravelassistance",
+  "newtravelasistance": "newtravelassistance",
 }
 
 const GENERIC_PALETTE: CompanyTheme[] = [
-  { barFrom: "#0284c7", barTo: "#0369a1", labelColor: "#0369a1", priceBg: "rgba(2,132,199,0.06)", priceBorder: "rgba(2,132,199,0.18)", dotColor: "#0284c7", btnBg: "linear-gradient(to right,#0284c7,#0369a1)", btnText: "#ffffff", logo: "" },
-  { barFrom: "#7c3aed", barTo: "#6d28d9", labelColor: "#6d28d9", priceBg: "rgba(124,58,237,0.06)", priceBorder: "rgba(124,58,237,0.18)", dotColor: "#7c3aed", btnBg: "linear-gradient(to right,#7c3aed,#6d28d9)", btnText: "#ffffff", logo: "" },
-  { barFrom: "#d97706", barTo: "#b45309", labelColor: "#92400e", priceBg: "rgba(217,119,6,0.06)", priceBorder: "rgba(217,119,6,0.18)", dotColor: "#d97706", btnBg: "linear-gradient(to right,#d97706,#b45309)", btnText: "#ffffff", logo: "" },
-  { barFrom: "#e11d48", barTo: "#be123c", labelColor: "#9f1239", priceBg: "rgba(225,29,72,0.06)", priceBorder: "rgba(225,29,72,0.18)", dotColor: "#e11d48", btnBg: "linear-gradient(to right,#e11d48,#be123c)", btnText: "#ffffff", logo: "" },
-  { barFrom: "#16a34a", barTo: "#15803d", labelColor: "#14532d", priceBg: "rgba(22,163,74,0.06)", priceBorder: "rgba(22,163,74,0.18)", dotColor: "#16a34a", btnBg: "linear-gradient(to right,#16a34a,#15803d)", btnText: "#ffffff", logo: "" },
-  { barFrom: "#0891b2", barTo: "#0e7490", labelColor: "#155e75", priceBg: "rgba(8,145,178,0.06)", priceBorder: "rgba(8,145,178,0.18)", dotColor: "#0891b2", btnBg: "linear-gradient(to right,#0891b2,#0e7490)", btnText: "#ffffff", logo: "" },
-  { barFrom: "#4f46e5", barTo: "#4338ca", labelColor: "#3730a3", priceBg: "rgba(79,70,229,0.06)", priceBorder: "rgba(79,70,229,0.18)", dotColor: "#4f46e5", btnBg: "linear-gradient(to right,#4f46e5,#4338ca)", btnText: "#ffffff", logo: "" },
-  { barFrom: "#0d9488", barTo: "#059669", labelColor: "#0d7a6a", priceBg: "rgba(13,148,136,0.06)", priceBorder: "rgba(13,148,136,0.18)", dotColor: "#0d9488", btnBg: "linear-gradient(to right,#0d9488,#059669)", btnText: "#ffffff", logo: "" },
+  { barFrom: "#0284c7", barTo: "#0369a1", labelColor: "#0369a1", priceBg: "rgba(2,132,199,0.06)", priceBorder: "rgba(2,132,199,0.18)", dotColor: "#0284c7", btnBg: "linear-gradient(to right,#0284c7,#0369a1)", btnText: "#ffffff" },
+  { barFrom: "#7c3aed", barTo: "#6d28d9", labelColor: "#6d28d9", priceBg: "rgba(124,58,237,0.06)", priceBorder: "rgba(124,58,237,0.18)", dotColor: "#7c3aed", btnBg: "linear-gradient(to right,#7c3aed,#6d28d9)", btnText: "#ffffff" },
+  { barFrom: "#d97706", barTo: "#b45309", labelColor: "#92400e", priceBg: "rgba(217,119,6,0.06)", priceBorder: "rgba(217,119,6,0.18)", dotColor: "#d97706", btnBg: "linear-gradient(to right,#d97706,#b45309)", btnText: "#ffffff" },
+  { barFrom: "#e11d48", barTo: "#be123c", labelColor: "#9f1239", priceBg: "rgba(225,29,72,0.06)", priceBorder: "rgba(225,29,72,0.18)", dotColor: "#e11d48", btnBg: "linear-gradient(to right,#e11d48,#be123c)", btnText: "#ffffff" },
+  { barFrom: "#16a34a", barTo: "#15803d", labelColor: "#14532d", priceBg: "rgba(22,163,74,0.06)", priceBorder: "rgba(22,163,74,0.18)", dotColor: "#16a34a", btnBg: "linear-gradient(to right,#16a34a,#15803d)", btnText: "#ffffff" },
+  { barFrom: "#0891b2", barTo: "#0e7490", labelColor: "#155e75", priceBg: "rgba(8,145,178,0.06)", priceBorder: "rgba(8,145,178,0.18)", dotColor: "#0891b2", btnBg: "linear-gradient(to right,#0891b2,#0e7490)", btnText: "#ffffff" },
+  { barFrom: "#4f46e5", barTo: "#4338ca", labelColor: "#3730a3", priceBg: "rgba(79,70,229,0.06)", priceBorder: "rgba(79,70,229,0.18)", dotColor: "#4f46e5", btnBg: "linear-gradient(to right,#4f46e5,#4338ca)", btnText: "#ffffff" },
+  { barFrom: "#0d9488", barTo: "#059669", labelColor: "#0d7a6a", priceBg: "rgba(13,148,136,0.06)", priceBorder: "rgba(13,148,136,0.18)", dotColor: "#0d9488", btnBg: "linear-gradient(to right,#0d9488,#059669)", btnText: "#ffffff" },
 ]
 
 export const PALETTE = GENERIC_PALETTE
 
 export function getCompanyTheme(company: string): CompanyTheme {
-  const key = company.toLowerCase().trim()
-  if (key in COMPANY_THEMES) return COMPANY_THEMES[key]
-  const canonical = COMPANY_ALIASES[key]
-  if (canonical && canonical in COMPANY_THEMES) return COMPANY_THEMES[canonical]
+  const key = normalizeCompanyKey(company)
+  const canonical = COMPANY_ALIASES[key] ?? key
+  if (canonical in COMPANY_THEMES) return COMPANY_THEMES[canonical]
   let hash = 0
   for (let i = 0; i < key.length; i++) hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0
   return GENERIC_PALETTE[Math.abs(hash) % GENERIC_PALETTE.length]
@@ -408,6 +408,45 @@ function InfoPill({ icon: Icon, label }: { icon: React.ElementType; label: strin
     <div className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
       <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
       {label}
+    </div>
+  )
+}
+
+/** Logo de compañía en cabecera; si falla, avatar con inicial + nombre. */
+function CompanyBrandMark({
+  company,
+  formalName,
+  theme,
+}: {
+  company: string
+  formalName: string
+  theme: CompanyTheme
+}) {
+  const logo = getCompanyLogo(company)
+  const [logoFailed, setLogoFailed] = useState(false)
+
+  if (logo && !logoFailed) {
+    return (
+      <img
+        src={logo}
+        alt={formalName}
+        className="h-9 w-auto max-w-[140px] object-contain object-left"
+        onError={() => setLogoFailed(true)}
+      />
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2.5 min-w-0">
+      <span
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+        style={{ background: `${theme.dotColor}14`, color: theme.dotColor }}
+      >
+        {getCompanyInitial(company)}
+      </span>
+      <span className="truncate text-sm font-medium text-muted-foreground">
+        {formalName}
+      </span>
     </div>
   )
 }
@@ -499,9 +538,15 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
           </p>
         </div>
         {onCompare && plans.length >= 2 && (
-          <Button variant="outline" size="sm" onClick={() => onCompare(plans)} className="shrink-0 gap-1.5 hidden md:flex">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onCompare(plans)}
+            className="shrink-0 gap-1.5 px-2.5 sm:px-3"
+            aria-label="Comparar planes"
+          >
             <GitCompareArrows className="h-4 w-4" />
-            Comparar planes
+            <span className="hidden sm:inline">Comparar planes</span>
           </Button>
         )}
       </div>
@@ -608,180 +653,141 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
       </div>
 
       {/* ── Tarjetas de planes ── */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {plans.map((plan) => {
           const theme = getCompanyTheme(plan.companyRaw)
-          const visibleBenefits = plan.coverage.slice(0, 4)
-          const extraCount = plan.coverage.length - 4
+          const visibleBenefits = plan.coverage.slice(0, 3)
+          const extraCount = plan.coverage.length - 3
           const exceptionsCount = plan.exceptions.length
 
           return (
             <div
               key={plan.id}
-              className="group relative flex flex-col rounded-2xl overflow-hidden bg-card border border-border/50 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+              className="group flex min-w-0 flex-col rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden"
             >
-              {/* Barra superior */}
+              {/* Acento de marca */}
               <div
-                className="h-[5px] shrink-0"
-                style={{ background: `linear-gradient(to right, ${theme.barFrom}, ${theme.barTo})` }}
+                className="h-0.5 shrink-0"
+                style={{ background: theme.dotColor }}
               />
 
-              {/* Header: dot + nombre + badge cobertura */}
-              <div
-                className="flex items-center justify-between gap-2 px-4 py-2.5 border-b border-border/30"
-                style={{ background: theme.priceBg }}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="h-[7px] w-[7px] rounded-full shrink-0" style={{ background: theme.dotColor }} />
-                  <p className="text-[11px] font-bold uppercase tracking-widest truncate" style={{ color: theme.labelColor }}>
-                    {plan.empresaCotizacion}
+              <div className="flex flex-1 flex-col p-4 sm:p-5 gap-4 sm:gap-5">
+                {/* Logo */}
+                <CompanyBrandMark
+                  company={plan.companyRaw}
+                  formalName={plan.empresaCotizacion}
+                  theme={theme}
+                />
+
+                {/* Título + meta */}
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <h3 className="text-base font-semibold text-foreground leading-snug line-clamp-2 tracking-tight">
+                    {plan.name}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Cobertura máx. {plan.maxCoverage}
                   </p>
                 </div>
-                <span
-                  className="shrink-0 text-[16px] font-black px-2.5 py-1 rounded-md border"
-                  style={{ background: `#fff`, color: theme.labelColor, borderColor: `${theme.dotColor}25` }}
-                >
-                  {plan.maxCoverage}
-                </span>
-              </div>
 
-              {/* Nombre del plan */}
-              <div className="mx-4 my-2.5 pl-3 py-2 rounded-r-md"
-                style={{ borderLeft: `3px solid ${theme.dotColor}`, background: `${theme.dotColor}06` }}>
-                <h3 className="text-[15px] text-center font-extrabold text-foreground line-clamp-2 leading-snug tracking-tight">
-                  {plan.name}
-                </h3>
-              </div>
-
-
-              {/* Precio — tal cual viene del back */}
-              <div className="px-4 pt-3 pb-4">
-
-                {/* Fila superior: USD grande + precio por día */}
-                <div className="flex justify-center items-center gap-2">
-                  <div className="flex  gap-2">
-                    <span
-                      className="text-[12px] underline font-bold uppercase tracking-widest mb-0.5"
-
-                    >
+                {/* Precio */}
+                <div className="flex flex-col gap-1 min-w-0">
+                  <div className="flex items-baseline gap-1.5 flex-wrap">
+                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       USD
                     </span>
-                    <span className="text-[2.4rem] font-black text-foreground leading-none tracking-tight">
+                    <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground leading-none">
                       {formatNumber(plan.price)}
                     </span>
                   </div>
-
-
-                </div>
-
-                {/* Divisor + fila inferior: ARS y TC solo si hay exchange_rate */}
-                {plan.exchange_rate && plan.exchange_rate > 0 && (
-                  <>
-                    <div className="my-2.5 h-px bg-border/50" />
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                          Total en ARS
-                        </span>
-                        <span className="text-[14px] font-semibold text-foreground">
-                          $ {formatNumber(Math.round(plan.price * plan.exchange_rate))}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-end gap-0.5">
-                        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                          tasa de cambio
-                        </span>
-                        <span className="text-[12px] font-medium text-muted-foreground">
-                          $ {Number(plan.exchange_rate).toLocaleString("es-AR")} ARS/USD
-                        </span>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-              </div>
-              {/* Separador */}
-              <div className="mx-4 h-px bg-border/50" />
-
-              {/* Beneficios */}
-              <ul className="flex flex-col gap-2 px-4 py-3.5 flex-1">
-                {visibleBenefits.map((item, index) => (
-                  <li key={`${plan.id}-cov-${index}`} className="flex items-start gap-2.5">
-                    <span
-                      className="h-[18px] w-[18px] rounded-full flex items-center justify-center shrink-0 mt-[1px]"
-                      style={{ background: `${theme.dotColor}15` }}
-                    >
-                      <Check className="h-2.5 w-2.5" style={{ color: theme.dotColor }} />
-                    </span>
-                    <span className="text-[12.5px] text-foreground/75 leading-snug">{item}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Más prestaciones */}
-              {extraCount > 0 ? (
-
-                <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1 py-2">
-                  <button
-                    type="button"
-                    onClick={() => handleViewDetails(plan)}
-                    className="text-[11.5px] font-medium text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-                  >
-                    +{extraCount} prestación{extraCount > 1 ? "es" : ""} más
-                  </button>
-
-                  {exceptionsCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleViewDetails(plan)}
-                      className="flex items-center gap-1 text-[11.5px] font-medium text-amber-600/80 hover:text-amber-700 transition-colors"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="size-3 shrink-0"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                        <line x1="12" y1="9" x2="12" y2="13" />
-                        <line x1="12" y1="17" x2="12.01" y2="17" />
-                      </svg>
-                      {exceptionsCount} exclusión{exceptionsCount > 1 ? "es" : ""}
-                    </button>
+                  {plan.exchange_rate && plan.exchange_rate > 0 && (
+                    <p className="text-xs text-muted-foreground break-words">
+                      ≈ ARS {formatNumber(Math.round(plan.price * plan.exchange_rate))}
+                      <span className="mx-1.5 text-border">·</span>
+                      TC {formatCurrencyARS(plan.exchange_rate)}
+                    </p>
                   )}
                 </div>
 
-              ) : (
-                <div className="mb-3.5" />
-              )}
+                {/* Prestaciones */}
+                <div
+                  className="flex flex-col gap-3 flex-1 rounded-xl px-3 py-3 sm:px-3.5 sm:py-3.5 min-w-0"
+                  style={{
+                    background: theme.priceBg,
+                    border: `1px solid ${theme.priceBorder}`,
+                  }}
+                >
+                  <p
+                    className="text-[11px] font-semibold uppercase tracking-wider"
+                    style={{ color: theme.labelColor }}
+                  >
+                    Prestaciones
+                  </p>
+                  <ul className="flex flex-col gap-2.5">
+                    {visibleBenefits.map((item, index) => (
+                      <li key={`${plan.id}-cov-${index}`} className="flex items-start gap-2.5 min-w-0">
+                        <span
+                          className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+                          style={{ background: `${theme.dotColor}18` }}
+                        >
+                          <Check
+                            className="h-2.5 w-2.5"
+                            style={{ color: theme.dotColor }}
+                          />
+                        </span>
+                        <span className="text-sm text-foreground/80 leading-snug break-words">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {(extraCount > 0 || exceptionsCount > 0) && (
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5">
+                      {extraCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleViewDetails(plan)}
+                          className="text-xs font-medium hover:underline underline-offset-2 transition-colors"
+                          style={{ color: theme.labelColor }}
+                        >
+                          +{extraCount} más
+                        </button>
+                      )}
+                      {exceptionsCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleViewDetails(plan)}
+                          className="text-xs font-medium text-amber-700/70 hover:text-amber-800 transition-colors"
+                        >
+                          {exceptionsCount} exclusión{exceptionsCount > 1 ? "es" : ""}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
-              {/* Acciones */}
-              <div className="flex gap-2 px-4 pb-4 mt-auto">
-                <button
-                  type="button"
-                  onClick={() => handleViewDetails(plan)}
-                  className="flex items-center justify-center gap-1.5 h-10 px-3 rounded-xl border border-border text-[12px] font-medium text-muted-foreground bg-transparent hover:bg-muted/50 hover:text-foreground transition-colors shrink-0"
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  Detalle
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectPlan?.({
-                    ...plan,
-                    tarifaTotalUnPago: plan.price,
-                    tarifaNeta: plan.price,
-                    totalUsd: plan.price
-                  })}
-                  className="flex-1 h-10 rounded-xl bg-foreground text-background text-[13px] font-bold flex items-center justify-center gap-1.5 hover:bg-foreground/90 active:scale-[0.98] transition-all"
-                >
-                  Seleccionar
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
+                {/* Acciones */}
+                <div className="flex gap-2 mt-auto pt-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => handleViewDetails(plan)}
+                    aria-label="Ver detalle"
+                    className="flex items-center justify-center gap-1.5 h-10 w-10 sm:w-auto sm:px-3.5 rounded-xl border border-border text-sm font-medium text-muted-foreground bg-transparent hover:bg-muted/40 hover:text-foreground transition-colors shrink-0"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Detalle</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectPlan?.({
+                      ...plan,
+                      tarifaTotalUnPago: plan.price,
+                      tarifaNeta: plan.price,
+                      totalUsd: plan.price
+                    })}
+                    className="min-w-0 flex-1 h-10 rounded-xl bg-foreground text-background text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-foreground/90 active:scale-[0.99] transition-all"
+                  >
+                    <span className="truncate">Seleccionar</span>
+                    <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+                  </button>
+                </div>
               </div>
             </div>
           )
@@ -816,9 +822,9 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                     </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    {(t.logo || selectedPlan.imagen) && (
+                    {(getCompanyLogo(selectedPlan.companyRaw) || selectedPlan.imagen) && (
                       <img
-                        src={t.logo || selectedPlan.imagen}
+                        src={getCompanyLogo(selectedPlan.companyRaw) || selectedPlan.imagen}
                         alt={selectedPlan.empresaCotizacion}
                         className="h-7 w-auto max-w-[120px] object-contain opacity-90"
                         onError={(e) => { e.currentTarget.style.display = "none" }}
@@ -878,7 +884,7 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                         </p>
                         {selectedPlan.exchange_rate && selectedPlan.exchange_rate > 0 && (
                           <p className="text-[11px] text-muted-foreground/60 w-full">
-                            TC: {Number(selectedPlan.exchange_rate).toLocaleString("es-AR")} ARS/USD
+                            TC: {formatCurrencyARS(selectedPlan.exchange_rate)} / USD
                           </p>
                         )}
                       </div>

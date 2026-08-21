@@ -52,6 +52,20 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // Log de depuración para ver qué responde el back
+    if (error.response) {
+      console.log("[api] error response:", {
+        url: error.config?.url,
+        status: error.response.status,
+        data: error.response.data,
+      })
+    } else if (error.request) {
+      console.log("[api] sin respuesta del servidor:", {
+        url: error.config?.url,
+        baseURL: error.config?.baseURL,
+      })
+    }
+
     // Manejo centralizado de errores
     if (error.response) {
       const status = error.response.status

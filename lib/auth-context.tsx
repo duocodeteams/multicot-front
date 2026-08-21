@@ -73,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Usar el servicio de login
       const data = await loginService({ email, password })
+      console.log("[auth-context] data recibida del login:", data)
    
       // Guardar la respuesta completa del backend
       setLoginResponse(data)

@@ -20,9 +20,21 @@ export async function healthCheck(): Promise<HealthCheckResponse> {
  * Inicia sesión y obtiene un token de acceso
  */
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
-  const response = await apiClient.post<LoginResponse>("/v1/auth/login", credentials)
-  
-  return response.data
+  try {
+    const response = await apiClient.post<LoginResponse>("/v1/auth/login", credentials)
+    console.log("[login] respuesta del back:", {
+      status: response.status,
+      data: response.data,
+    })
+    return response.data
+  } catch (error: any) {
+    console.log("[login] error del back:", {
+      status: error?.response?.status,
+      data: error?.response?.data,
+      message: error?.message,
+    })
+    throw error
+  }
 }
 
 /**

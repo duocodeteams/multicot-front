@@ -26,6 +26,7 @@ type ViewState =
   | "admin-create-agency"
   | "admin-create-user"
   | "admin-management"
+  | "admin-plans"
 
 const VIEW_TITLES: Record<string, { label: string; section?: string }> = {
   form: { label: "Nueva Cotización", section: "Cotizador" },
@@ -37,6 +38,7 @@ const VIEW_TITLES: Record<string, { label: string; section?: string }> = {
   "admin-create-agency": { label: "Crear Agencia", section: "Administración" },
   "admin-create-user": { label: "Crear Vendedor", section: "Administración" },
   "admin-management": { label: "Panel de Administración", section: "Administración" },
+  "admin-plans": { label: "Gestión de planes", section: "Administración" },
 }
 
 type DashboardHeaderProps = {

@@ -11,6 +11,7 @@ import { AdminUsersAgencies } from "@/components/admin-users-agencies"
 import { AdminCreateAgency } from "@/components/admin-create-agency"
 import { AdminCreateUser } from "@/components/admin-create-user"
 import { AdminManagement } from "@/components/admin-management"
+import { AdminPlansManagement } from "@/components/admin-plans-management"
 import { PlanEmissionView } from "@/components/plan-emission-view"
 import type { SelectedPlan } from "@/components/plan-emission-view"
 import { PlanComparisonView } from "@/components/plan-comparison-view"
@@ -20,7 +21,7 @@ import { createQuote } from "@/lib/services"
 import { mapQuotationDataToApi } from "@/lib/services/quotes.mapper"
 import { toast } from "sonner"
 
-type ViewState = "form" | "loading" | "results" | "emission" | "comparison" | "settings" | "admin-users-agencies" | "admin-create-agency" | "admin-create-user" | "admin-management"
+type ViewState = "form" | "loading" | "results" | "emission" | "comparison" | "settings" | "admin-users-agencies" | "admin-create-agency" | "admin-create-user" | "admin-management" | "admin-plans"
 
 export function DashboardView() {
   const { loginResponse } = useAuth()
@@ -110,6 +111,10 @@ export function DashboardView() {
     setView("admin-management")
   }
 
+  const handleNavigateToAdminPlans = () => {
+    setView("admin-plans")
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar 
@@ -119,6 +124,7 @@ export function DashboardView() {
         onNavigateToAdminCreateAgency={handleNavigateToAdminCreateAgency}
         onNavigateToAdminCreateUser={handleNavigateToAdminCreateUser}
         onNavigateToAdminManagement={handleNavigateToAdminManagement}
+        onNavigateToAdminPlans={handleNavigateToAdminPlans}
         currentView={view}
       />
       <SidebarInset>
@@ -158,6 +164,7 @@ export function DashboardView() {
           {view === "admin-create-agency" && <AdminCreateAgency />}
           {view === "admin-create-user" && <AdminCreateUser />}
           {view === "admin-management" && <AdminManagement />}
+          {view === "admin-plans" && <AdminPlansManagement />}
         </div>
       </SidebarInset>
     </SidebarProvider>

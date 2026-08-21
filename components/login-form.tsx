@@ -2,7 +2,7 @@
 
 import React from "react"
 import { useState } from "react"
-import { Plane, Shield, Globe, Clock, Users, Sparkles, Mail, Lock, CheckCircle2 } from "lucide-react"
+import { Plane, Shield, Globe, Clock, Users, Sparkles, Mail, Lock, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,6 +34,7 @@ type LoginFormData = z.infer<typeof loginSchema>
 export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const { login } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [forgotModalOpen, setForgotModalOpen] = useState(false)
   const [forgotUserName, setForgotUserName] = useState("")
   const [forgotLoading, setForgotLoading] = useState(false)
@@ -323,15 +324,23 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     {...register("password")}
-                    className={`h-11 bg-white border pl-10 text-sm text-gray-900 placeholder:text-gray-400 rounded-xl transition-all focus-visible:ring-2 ${errors.password
+                    className={`h-11 bg-white border pl-10 pr-10 text-sm text-gray-900 placeholder:text-gray-400 rounded-xl transition-all focus-visible:ring-2 ${errors.password
                       ? "border-red-400 focus-visible:ring-red-100"
                       : "border-gray-300 hover:border-gray-400 focus:border-[#282f78] focus-visible:ring-[#282f78]/10"
                       }`}
                     autoComplete="current-password"
                   />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
                 {errors.password && (
                   <p className="text-xs text-red-600 font-medium flex items-center gap-1.5">

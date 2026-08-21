@@ -1,6 +1,7 @@
 import type { Plan } from "@/components/quotation-results"
 import { getCompanyTheme, formatNumber } from "@/components/quotation-results"
 import type { QuotationData } from "@/components/quotation-form"
+import { getCompanyLogo } from "@/lib/company-logo"
 
 const DESTINATION_LABELS: Record<string, string> = {
   "1001": "Europa",
@@ -59,7 +60,10 @@ export async function downloadComparisonPDF(
 
   // Precargar logos en base64 para que funcionen en la ventana nueva
   const logos = await Promise.all(
-    themes.map((t) => (t.logo ? toBase64(`${origin}${t.logo}`) : Promise.resolve(null)))
+    selected.map((p) => {
+      const logo = getCompanyLogo(p.companyRaw) ?? getCompanyLogo(p.empresaCotizacion)
+      return logo ? toBase64(`${origin}${logo}`) : Promise.resolve(null)
+    })
   )
 
   // ── Plan header cards ──────────────────────────────────────────────────

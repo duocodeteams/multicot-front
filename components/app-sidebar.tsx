@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { LayoutDashboard, Settings, HelpCircle, Users, Building2, UserPlus, Shield, LogOut } from "lucide-react"
+import { LayoutDashboard, Settings, HelpCircle, Users, Building2, UserPlus, Shield, LogOut, Layers } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -36,6 +36,7 @@ type AppSidebarProps = {
   onNavigateToAdminCreateAgency?: () => void
   onNavigateToAdminCreateUser?: () => void
   onNavigateToAdminManagement?: () => void
+  onNavigateToAdminPlans?: () => void
   currentView?: string
 }
 
@@ -46,6 +47,7 @@ export function AppSidebar({
   onNavigateToAdminCreateAgency,
   onNavigateToAdminCreateUser,
   onNavigateToAdminManagement,
+  onNavigateToAdminPlans,
   currentView = "form"
 }: AppSidebarProps) {
   const { user, logout } = useAuth()
@@ -176,6 +178,16 @@ export function AppSidebar({
                     >
                       <Shield className="h-4 w-4" />
                       <span>Gestión Admin</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={currentView === "admin-plans"}
+                      tooltip="Gestión de planes"
+                      onClick={onNavigateToAdminPlans}
+                    >
+                      <Layers className="h-4 w-4" />
+                      <span>Gestión de planes</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
