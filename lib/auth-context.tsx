@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { login as loginService } from "./services"
-import {apiClient} from './api'
 
 type User = {
   id: number
@@ -141,37 +140,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
-    try {
-      // Obtener userId y token antes de limpiar el estado
-      const currentUser = user
-      const currentToken = token
+    setUser(null)
+    setLoginResponse(null)
+    setToken(null)
 
-      // Si hay usuario y token, hacer logout en el backend
-      if (currentUser?.id && currentToken) {
-        try {
-          await apiClient.put(`/v1/auth/logout?userId=${currentUser.id}`)
-        } catch (error: any) {
-          // Si falla el logout en el backend, igualmente limpiar la sesión local
-          console.error("Error al hacer logout en el backend:", error)
-          // Continuar con la limpieza local
-        }
-      }
-    } catch (error: any) {
-      console.error("Error en logout:", error)
-      // Continuar con la limpieza local incluso si hay error
-    } finally {
-      // Siempre limpiar estado y localStorage
-      setUser(null)
-      setLoginResponse(null)
-      setToken(null)
-      
-      if (typeof window !== "undefined") {
-        localStorage.removeItem(AUTH_TOKEN_KEY)
-        localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY)
-        localStorage.removeItem(AUTH_USER_KEY)
-      }
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(AUTH_TOKEN_KEY)
+      localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY)
+      localStorage.removeItem(AUTH_USER_KEY)
     }
-  }, [user, token])
+  }, [])
 
   return (
     <AuthContext.Provider

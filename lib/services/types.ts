@@ -225,3 +225,80 @@ export interface ListSellersParams {
   active?: boolean | null // true = solo activos, false = todos, null = solo activos (default)
   agency_id?: number // Solo ADMIN puede usar este filtro
 }
+
+// ==================== COMPAÑÍAS / PLANES (ADMIN) ====================
+
+/** Destinos fijos del backend (destination_id). */
+export type PlanDestinationId = 1 | 2 | 3 | 4 | 5
+
+export interface CompanyResponse {
+  id: number
+  slug: string
+  name: string
+  active: boolean
+}
+
+export interface ListCompaniesParams {
+  active?: boolean
+  limit?: number
+  offset?: number
+}
+
+export interface ListCompaniesResponse {
+  items: CompanyResponse[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface UpdateCompanyRequest {
+  active: boolean
+}
+
+export interface PlanDestination {
+  destination_id: PlanDestinationId
+  enabled: boolean
+}
+
+export interface PlanResponse {
+  id: number
+  company_id: number
+  company_slug: string
+  company_name: string
+  external_plan_id: string
+  name: string
+  /** Puede venir como string desde el API ("15"). */
+  markup: string | number
+  active: boolean
+  destinations: PlanDestination[]
+}
+
+export interface CreatePlanRequest {
+  company_id: number
+  external_plan_id: string
+  name: string
+  markup?: number
+}
+
+export interface UpdatePlanRequest {
+  name?: string
+  markup?: number
+  active?: boolean
+  destinations?: PlanDestination[]
+}
+
+export interface ListPlansParams {
+  company_id?: number
+  destination_id?: PlanDestinationId
+  /** Omitido = solo activos. false = todos (incluye baja lógica). */
+  active?: boolean
+  limit?: number
+  offset?: number
+}
+
+export interface ListPlansResponse {
+  items: PlanResponse[]
+  total: number
+  limit: number
+  offset: number
+}
