@@ -129,7 +129,7 @@ export function DashboardView() {
       />
       <SidebarInset>
         <DashboardHeader currentView={view} />
-        <div className="flex-1 overflow-auto p-4 md:p-6 w-full">
+        <div className="flex-1 overflow-auto p-4 md:p-6 w-full min-w-0">
           {view === "form" && (
             <QuotationForm onSubmit={handleSubmit} isLoading={isLoading} />
           )}

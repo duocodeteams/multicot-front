@@ -30,8 +30,13 @@ import { getCompanyLogo, getCompanyInitial, normalizeCompanyKey } from "@/lib/co
 export type Plan = {
   id: string | number
   name: string
-  price: number          // precio USD tal cual viene del back
-  pricePerDay: number    // calculado: price / days
+  /** Precio principal para ordenar/compat: USD si hay, si no ARS. */
+  price: number
+  pricePerDay: number
+  /** Precio en USD si el back envió final_rate_usd. */
+  priceUsd?: number
+  /** Precio en ARS si el back envió final_rate. */
+  priceArs?: number
   badge: string | null
   coverage: string[]
   maxCoverage: string
@@ -39,7 +44,8 @@ export type Plan = {
   exceptions: string[]
   companyRaw: string
   imagen?: string
-  exchange_rate?: number // TC ARS/USD si el back lo manda
+  /** TC ARS/USD. 1 = sin TC; 2 = mostrar solo USD; >2 = TC real. */
+  exchange_rate?: number
 }
 
 export function formatNumber(num: number): string {
@@ -53,6 +59,33 @@ export function formatCurrencyARS(num: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(num)
+}
+
+/** True si el back mandó un valor de tarifa usable (no vacío / null). */
+export function hasRateValue(value: string | number | null | undefined): boolean {
+  if (value === null || value === undefined) return false
+  if (typeof value === "string" && value.trim() === "") return false
+  const n = typeof value === "number" ? value : Number(value)
+  return Number.isFinite(n)
+}
+
+export function parseOptionalRate(
+  value: string | number | null | undefined
+): number | undefined {
+  if (!hasRateValue(value)) return undefined
+  const n = typeof value === "number" ? value : Number(value)
+  return Number.isFinite(n) ? n : undefined
+}
+
+/** TC usable. 1 o menos = sin TC. 2 se conserva como flag “solo USD”. */
+export function parseExchangeRate(
+  value: string | number | null | undefined
+): number | undefined {
+  const n = parseOptionalRate(value)
+  if (n === undefined || n < 1) return undefined
+  // 1 = sin TC → se descarta
+  if (n === 1) return undefined
+  return n
 }
 
 function parseCoverageAmount(coverageStr: string): number {
@@ -85,7 +118,9 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
   // Formato nuevo: { plans: [...] }
   if (backendResponse.plans && Array.isArray(backendResponse.plans)) {
     const plans: Plan[] = backendResponse.plans.map((planData: any) => {
-      const price = parseNumber(planData.final_rate_usd ?? planData.final_rate, 0)
+      const priceUsd = parseOptionalRate(planData.final_rate_usd)
+      const priceArs = parseOptionalRate(planData.final_rate)
+      const price = priceUsd ?? priceArs ?? 0
       const coverageAmount = parseNumber(planData.coverage_amount, 0)
       const benefits = Array.isArray(planData.benefits) ? planData.benefits : []
       const exceptions = Array.isArray(planData.exceptions) ? planData.exceptions : []
@@ -113,6 +148,8 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
         id: planData.plan_id,
         name: planData.plan_name ?? planData.plan ?? "Plan",
         price,
+        priceUsd,
+        priceArs,
         pricePerDay: days > 0 ? Math.round(price / days) : price,
         badge: null,
         coverage,
@@ -121,7 +158,7 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
         empresaCotizacion: mapCompanyToFormalCompany(planData.company ?? "Compañía"),
         companyRaw: planData.company ?? "Compañía",
         imagen: planData.imagen,
-        exchange_rate: planData.exchange_rate ? parseFloat(planData.exchange_rate) : undefined,
+        exchange_rate: parseExchangeRate(planData.exchange_rate),
       } satisfies Plan
     })
 
@@ -164,6 +201,7 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
           id: cotizacion.id ?? `${empresa}-${Math.random()}`,
           name: cotizacion.plan ?? "Plan",
           price,
+          priceUsd: price,
           pricePerDay: days > 0 ? Math.round(price / days) : price,
           badge: null,
           coverage,
@@ -172,7 +210,7 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
           empresaCotizacion: cotizacion.empresaCotizacion ?? empresa,
           companyRaw: cotizacion.empresaCotizacion ?? empresa,
           imagen: cotizacion.imagen,
-          exchange_rate: cotizacion.exchange_rate ? parseFloat(cotizacion.exchange_rate) : undefined,
+          exchange_rate: parseExchangeRate(cotizacion.exchange_rate),
         })
       })
     })
@@ -201,6 +239,7 @@ function generatePlans(data: QuotationData): Plan[] {
       id: "esencial",
       name: "Plan Esencial",
       price: Math.round(base * 2.5),
+      priceUsd: Math.round(base * 2.5),
       pricePerDay: Math.round((base * 2.5) / days),
       badge: null,
       maxCoverage: "USD 30.000",
@@ -221,6 +260,7 @@ function generatePlans(data: QuotationData): Plan[] {
       id: "plus",
       name: "Plan Plus",
       price: Math.round(base * 4.2),
+      priceUsd: Math.round(base * 4.2),
       pricePerDay: Math.round((base * 4.2) / days),
       badge: null,
       maxCoverage: "USD 60.000",
@@ -243,6 +283,7 @@ function generatePlans(data: QuotationData): Plan[] {
       id: "premium",
       name: "Plan Premium",
       price: Math.round(base * 6.8),
+      priceUsd: Math.round(base * 6.8),
       pricePerDay: Math.round((base * 6.8) / days),
       badge: null,
       maxCoverage: "USD 150.000",
@@ -337,9 +378,9 @@ const COMPANY_THEMES: Record<string, CompanyTheme> = {
     dotColor: "#7738ff", btnBg: "linear-gradient(to right,#0a68ff,#ef08ff)", btnText: "#ffffff",
   },
   "interassist": {
-    barFrom: "#9cc45c", barTo: "#5a8a2a", labelColor: "#3d6018",
-    priceBg: "rgba(90,138,42,0.06)", priceBorder: "rgba(90,138,42,0.18)",
-    dotColor: "#5a8a2a", btnBg: "linear-gradient(to right,#9cc45c,#5a8a2a)", btnText: "#ffffff",
+    barFrom: "#008c77", barTo: "#9dc75a", labelColor: "#006b5a",
+    priceBg: "rgba(0,140,119,0.06)", priceBorder: "rgba(0,140,119,0.18)",
+    dotColor: "#008c77", btnBg: "linear-gradient(to right,#008c77,#9dc75a)", btnText: "#ffffff",
   },
   "terrawind": {
     barFrom: "#007cba", barTo: "#223e66", labelColor: "#005a8a",
@@ -356,6 +397,11 @@ const COMPANY_THEMES: Record<string, CompanyTheme> = {
     priceBg: "rgba(1,107,145,0.06)", priceBorder: "rgba(1,107,145,0.18)",
     dotColor: "#016b91", btnBg: "linear-gradient(to right,#016b91,#5bbec2)", btnText: "#ffffff",
   },
+  "omint": {
+    barFrom: "#218a78", barTo: "#283273", labelColor: "#1a6e60",
+    priceBg: "rgba(33,138,120,0.06)", priceBorder: "rgba(33,138,120,0.18)",
+    dotColor: "#218a78", btnBg: "linear-gradient(to right,#218a78,#283273)", btnText: "#ffffff",
+  },
 }
 
 // Claves ya normalizadas con normalizeCompanyKey (sin espacios ni signos)
@@ -368,6 +414,7 @@ const COMPANY_ALIASES: Record<string, string> = {
   "terrawindassistance": "terrawind", "terrawindglobalprotection": "terrawind",
   "newtravel": "newtravelassistance", "newtravelassist": "newtravelassistance",
   "newtravelasistance": "newtravelassistance",
+  "omintassistance": "omint", "omintassist": "omint",
 }
 
 const GENERIC_PALETTE: CompanyTheme[] = [
@@ -408,6 +455,63 @@ function InfoPill({ icon: Icon, label }: { icon: React.ElementType; label: strin
     <div className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm">
       <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
       {label}
+    </div>
+  )
+}
+
+/** Precio en carta/modal: solo USD, solo ARS, o ambos (sin inventar con TC). */
+function PlanPriceBlock({
+  plan,
+  days,
+  size = "card",
+}: {
+  plan: Plan
+  days?: number
+  size?: "card" | "detail"
+}) {
+  const usdOnly = plan.exchange_rate === 2
+  const hasUsd = plan.priceUsd !== undefined
+  const hasArs = !usdOnly && plan.priceArs !== undefined
+  const showTc =
+    hasUsd && hasArs && plan.exchange_rate !== undefined && plan.exchange_rate > 2
+  const isDetail = size === "detail"
+  const amountClass = isDetail
+    ? "text-[2rem] font-black text-foreground leading-none tracking-tight"
+    : "text-2xl sm:text-3xl font-semibold tracking-tight text-foreground leading-none"
+  const currencyClass = isDetail
+    ? "text-[24px] font-bold"
+    : "text-xs font-medium uppercase tracking-wide text-muted-foreground"
+
+  return (
+    <div className={isDetail ? "space-y-2" : "flex flex-col gap-1 min-w-0"}>
+      {hasUsd && (
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className={currencyClass}>USD</span>
+          <span className={amountClass}>{formatNumber(plan.priceUsd!)}</span>
+        </div>
+      )}
+      {!hasUsd && hasArs && (
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className={currencyClass}>ARS</span>
+          <span className={amountClass}>{formatNumber(plan.priceArs!)}</span>
+        </div>
+      )}
+      {hasUsd && hasArs && (
+        <p className="text-xs text-muted-foreground break-words">
+          ARS {formatNumber(plan.priceArs!)}
+          {showTc && (
+            <>
+              <span className="mx-1.5 text-border">·</span>
+              TC {formatCurrencyARS(plan.exchange_rate!)}
+            </>
+          )}
+        </p>
+      )}
+      {isDetail && days !== undefined && days > 0 && plan.pricePerDay > 0 && (
+        <p className="text-[12px] text-muted-foreground">
+          {hasUsd ? "USD" : "ARS"} {formatNumber(plan.pricePerDay)} / día
+        </p>
+      )}
     </div>
   )
 }
@@ -690,23 +794,7 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                 </div>
 
                 {/* Precio */}
-                <div className="flex flex-col gap-1 min-w-0">
-                  <div className="flex items-baseline gap-1.5 flex-wrap">
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      USD
-                    </span>
-                    <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground leading-none">
-                      {formatNumber(plan.price)}
-                    </span>
-                  </div>
-                  {plan.exchange_rate && plan.exchange_rate > 0 && (
-                    <p className="text-xs text-muted-foreground break-words">
-                      ≈ ARS {formatNumber(Math.round(plan.price * plan.exchange_rate))}
-                      <span className="mx-1.5 text-border">·</span>
-                      TC {formatCurrencyARS(plan.exchange_rate)}
-                    </p>
-                  )}
-                </div>
+                <PlanPriceBlock plan={plan} />
 
                 {/* Prestaciones */}
                 <div
@@ -780,7 +868,7 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                       ...plan,
                       tarifaTotalUnPago: plan.price,
                       tarifaNeta: plan.price,
-                      totalUsd: plan.price
+                      totalUsd: plan.priceUsd ?? plan.price
                     })}
                     className="min-w-0 flex-1 h-10 rounded-xl bg-foreground text-background text-sm font-semibold flex items-center justify-center gap-1.5 hover:bg-foreground/90 active:scale-[0.99] transition-all"
                   >
@@ -858,36 +946,13 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
                         Precio total
                       </p>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-[24px] font-bold px-1.5 py-0.5 rounded">
-                          USD
+                      <PlanPriceBlock plan={selectedPlan} days={days} size="detail" />
+                      <p className="text-[12px] text-muted-foreground mt-2">
+                        Cobertura máx.{" "}
+                        <span className="font-semibold text-foreground/80">
+                          {selectedPlan.maxCoverage}
                         </span>
-                        <span className="text-[2rem] font-black text-foreground leading-none tracking-tight">
-                          {formatNumber(selectedPlan.price)}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
-                        {selectedPlan.exchange_rate && selectedPlan.exchange_rate > 0 && (
-                          <p className="text-[12px] text-muted-foreground">
-                            ≈ <span className="font-semibold text-foreground/70">
-                              ARS {formatNumber(Math.round(selectedPlan.price * selectedPlan.exchange_rate))}
-                            </span>
-                          </p>
-                        )}
-                        {days > 0 && selectedPlan.pricePerDay > 0 && (
-                          <p className="text-[12px] text-muted-foreground">
-                            USD {formatNumber(selectedPlan.pricePerDay)} / día
-                          </p>
-                        )}
-                        <p className="text-[12px] text-muted-foreground">
-                          Cobertura máx. <span className="font-semibold text-foreground/80">{selectedPlan.maxCoverage}</span>
-                        </p>
-                        {selectedPlan.exchange_rate && selectedPlan.exchange_rate > 0 && (
-                          <p className="text-[11px] text-muted-foreground/60 w-full">
-                            TC: {formatCurrencyARS(selectedPlan.exchange_rate)} / USD
-                          </p>
-                        )}
-                      </div>
+                      </p>
                     </div>
 
                     {/* Prestaciones */}
@@ -1017,7 +1082,7 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                         ...selectedPlan,
                         tarifaTotalUnPago: selectedPlan.price,
                         tarifaNeta: selectedPlan.price,
-                        totalUsd: selectedPlan.price
+                        totalUsd: selectedPlan.priceUsd ?? selectedPlan.price
                       })
                     }}
                     className="flex-[2] h-10 rounded-xl bg-foreground text-background text-[13px] font-bold flex items-center justify-center gap-1.5 hover:bg-foreground/90 active:scale-[0.98] transition-all"

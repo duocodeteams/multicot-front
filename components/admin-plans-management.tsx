@@ -9,6 +9,7 @@ import {
   Plus,
   Trash2,
   Loader2,
+  Pencil,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -59,20 +60,34 @@ import {
   PLAN_DESTINATION_OPTIONS,
   createPlan,
   deletePlan,
+  getPlanMarkupTotal,
   listPlans,
-  parsePlanMarkup,
+  parseMarkupField,
+  parseMarkupPercent,
   updatePlan,
 } from "@/lib/services/plans.service"
+import { mapCompanyToFormalCompany } from "@/lib/services/quotes.mapper"
 import type {
   CompanyResponse,
+  CreatePlanRequest,
   PlanDestination,
   PlanDestinationId,
   PlanResponse,
 } from "@/lib/services/types"
 
+type MarkupValues = {
+  producer_markup: number
+  organizer_markup: number
+  operating_expenses: number
+}
+
 type ConfirmState =
   | { type: "company-active"; company: CompanyResponse; nextActive: boolean }
-  | { type: "plan-markup"; plan: PlanResponse; nextMarkup: number }
+  | {
+      type: "plan-markup"
+      plan: PlanResponse
+      next: MarkupValues
+    }
   | { type: "plan-active"; plan: PlanResponse; nextActive: boolean }
   | {
       type: "plan-destination"
@@ -83,12 +98,7 @@ type ConfirmState =
   | { type: "plan-delete"; plan: PlanResponse }
   | {
       type: "plan-create"
-      data: {
-        company_id: number
-        external_plan_id: string
-        name: string
-        markup: number
-      }
+      data: CreatePlanRequest
       isFirstPlanForCompany: boolean
       companyName: string
     }
@@ -123,7 +133,10 @@ export function AdminPlansManagement() {
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [isConfirming, setIsConfirming] = useState(false)
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
-  const [markupInputKey, setMarkupInputKey] = useState(0)
+
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20
 
   // Filtros planes
   const [companyFilter, setCompanyFilter] = useState<string>("all")
@@ -139,7 +152,15 @@ export function AdminPlansManagement() {
   const [createCompanyId, setCreateCompanyId] = useState<string>("")
   const [createExternalId, setCreateExternalId] = useState("")
   const [createName, setCreateName] = useState("")
-  const [createMarkup, setCreateMarkup] = useState("0")
+  const [createProductor, setCreateProductor] = useState("0")
+  const [createOrganizador, setCreateOrganizador] = useState("0")
+  const [createGastos, setCreateGastos] = useState("0")
+
+  // Edición de markup
+  const [markupEditPlan, setMarkupEditPlan] = useState<PlanResponse | null>(null)
+  const [editProductor, setEditProductor] = useState("0")
+  const [editOrganizador, setEditOrganizador] = useState("0")
+  const [editGastos, setEditGastos] = useState("0")
 
   const isAdmin =
     String(user?.role ?? "").toLowerCase() === "admin" ||
@@ -165,8 +186,8 @@ export function AdminPlansManagement() {
     setIsLoadingPlans(true)
     try {
       const params: Parameters<typeof listPlans>[0] = {
-        limit: 100,
-        offset: 0,
+        limit: pageSize,
+        offset: (currentPage - 1) * pageSize,
       }
       if (companyFilter !== "all") params.company_id = Number(companyFilter)
       if (destinationFilter !== "all") {
@@ -187,7 +208,7 @@ export function AdminPlansManagement() {
       setIsLoadingPlans(false)
       setPlansReady(true)
     }
-  }, [companyFilter, destinationFilter, showInactivePlans])
+  }, [companyFilter, destinationFilter, showInactivePlans, currentPage, pageSize])
 
   const reloadAll = useCallback(async () => {
     await Promise.all([loadCompanies(), loadPlans()])
@@ -203,9 +224,10 @@ export function AdminPlansManagement() {
     void loadPlans()
   }, [isAdmin, loadPlans])
 
-  // Al cambiar filtros, limpio la selección para no operar sobre planes ocultos
+  // Al cambiar filtros, limpio la selección y vuelvo a página 1
   useEffect(() => {
     setSelectedPlanIds([])
+    setCurrentPage(1)
   }, [companyFilter, destinationFilter, showInactivePlans])
 
   const filteredPlans = useMemo(() => {
@@ -274,10 +296,9 @@ export function AdminPlansManagement() {
     return map
   }, [plans])
 
-  const closeConfirm = (resetMarkup = false) => {
+  const closeConfirm = () => {
     if (isConfirming) return
     setConfirm(null)
-    if (resetMarkup) setMarkupInputKey((k) => k + 1)
   }
 
   const applyCompanyActive = async (companyId: number, active: boolean) => {
@@ -331,17 +352,24 @@ export function AdminPlansManagement() {
       if (pending.type === "company-active") {
         await applyCompanyActive(pending.company.id, pending.nextActive)
       } else if (pending.type === "plan-markup") {
+        const total = getPlanMarkupTotal(pending.next)
         await applyPlanUpdate(
           pending.plan.id,
-          { markup: pending.nextMarkup },
+          {
+            producer_markup: pending.next.producer_markup,
+            organizer_markup: pending.next.organizer_markup,
+            operating_expenses: pending.next.operating_expenses,
+          },
           `plan-${pending.plan.id}-markup`
         )
-        if (pending.nextMarkup === 0) {
-          toast.warning("Porcentaje quitado", {
-            description: `“${pending.plan.name}” queda sin porcentaje adicional.`,
+        if (total === 0) {
+          toast.warning("Markup quitado", {
+            description: `“${pending.plan.name}” queda en 0%.`,
           })
         } else {
-          toast.success(`Porcentaje actualizado a ${pending.nextMarkup}%`)
+          toast.success(`Markup total actualizado a ${total}%`, {
+            description: `Prod. ${pending.next.producer_markup}% · Org. ${pending.next.organizer_markup}% · G.O. ${pending.next.operating_expenses}%`,
+          })
         }
       } else if (pending.type === "plan-active") {
         await applyPlanUpdate(
@@ -397,7 +425,9 @@ export function AdminPlansManagement() {
           setCreateCompanyId("")
           setCreateExternalId("")
           setCreateName("")
-          setCreateMarkup("0")
+          setCreateProductor("0")
+          setCreateOrganizador("0")
+          setCreateGastos("0")
           await loadPlans()
         } finally {
           setSavingKey(null)
@@ -454,7 +484,6 @@ export function AdminPlansManagement() {
 
       setConfirm(null)
     } catch (error: unknown) {
-      if (pending.type === "plan-markup") setMarkupInputKey((k) => k + 1)
       if (
         pending.type === "plan-delete" ||
         pending.type === "plan-create" ||
@@ -477,16 +506,54 @@ export function AdminPlansManagement() {
     }
   }
 
-  const requestMarkupChange = (plan: PlanResponse, value: string) => {
-    const trimmed = value.trim()
-    const next = trimmed === "" ? 0 : Number(trimmed)
-    if (Number.isNaN(next) || next < 0) {
-      toast.error("Porcentaje inválido", { description: "Ingresá un número mayor o igual a 0" })
-      setMarkupInputKey((k) => k + 1)
+  const requestMarkupChange = (plan: PlanResponse, next: MarkupValues) => {
+    const current: MarkupValues = {
+      producer_markup: parseMarkupPercent(plan.producer_markup),
+      organizer_markup: parseMarkupPercent(plan.organizer_markup),
+      operating_expenses: parseMarkupPercent(plan.operating_expenses),
+    }
+    if (
+      current.producer_markup === next.producer_markup &&
+      current.organizer_markup === next.organizer_markup &&
+      current.operating_expenses === next.operating_expenses
+    ) {
+      toast.message("Sin cambios", {
+        description: "El markup quedó igual que antes.",
+      })
+      setMarkupEditPlan(null)
       return
     }
-    if (next === parsePlanMarkup(plan.markup)) return
-    setConfirm({ type: "plan-markup", plan, nextMarkup: next })
+    setMarkupEditPlan(null)
+    setConfirm({ type: "plan-markup", plan, next })
+  }
+
+  const openMarkupEdit = (plan: PlanResponse) => {
+    setEditProductor(String(parseMarkupPercent(plan.producer_markup)))
+    setEditOrganizador(String(parseMarkupPercent(plan.organizer_markup)))
+    setEditGastos(String(parseMarkupPercent(plan.operating_expenses)))
+    setMarkupEditPlan(plan)
+  }
+
+  const submitMarkupEdit = () => {
+    if (!markupEditPlan) return
+    const producer_markup = parseMarkupField(editProductor)
+    const organizer_markup = parseMarkupField(editOrganizador)
+    const operating_expenses = parseMarkupField(editGastos)
+    if (
+      producer_markup === null ||
+      organizer_markup === null ||
+      operating_expenses === null
+    ) {
+      toast.error("Markup inválido", {
+        description: "Los tres valores tienen que ser números mayores o iguales a 0",
+      })
+      return
+    }
+    requestMarkupChange(markupEditPlan, {
+      producer_markup,
+      organizer_markup,
+      operating_expenses,
+    })
   }
 
   const openCreateConfirm = () => {
@@ -503,16 +570,21 @@ export function AdminPlansManagement() {
       toast.error("Ingresá el nombre del plan")
       return
     }
-    const markup = createMarkup.trim() === "" ? 0 : Number(createMarkup)
-    if (Number.isNaN(markup) || markup < 0) {
-      toast.error("Porcentaje inválido")
+    const producer_markup = parseMarkupField(createProductor)
+    const organizer_markup = parseMarkupField(createOrganizador)
+    const operating_expenses = parseMarkupField(createGastos)
+    if (
+      producer_markup === null ||
+      organizer_markup === null ||
+      operating_expenses === null
+    ) {
+      toast.error("Markup inválido", {
+        description: "Los tres valores tienen que ser números mayores o iguales a 0",
+      })
       return
     }
 
     const company = companies.find((c) => c.id === companyId)
-    // Contamos con el listado actual (puede estar filtrado). Pedimos también si la compañía
-    // ya aparece en planes cargados; si showInactive=false puede subestimar, así que avisamos
-    // también cuando no hay ningún plan de esa compañía en memoria.
     const knownCount = plansCountByCompany.get(companyId) ?? 0
     const isFirstPlanForCompany = knownCount === 0
 
@@ -522,10 +594,14 @@ export function AdminPlansManagement() {
         company_id: companyId,
         external_plan_id: createExternalId.trim(),
         name: createName.trim(),
-        markup,
+        producer_markup,
+        organizer_markup,
+        operating_expenses,
       },
       isFirstPlanForCompany,
-      companyName: company?.name ?? "la compañía",
+      companyName: company
+        ? mapCompanyToFormalCompany(company.name)
+        : "la compañía",
     })
   }
 
@@ -535,7 +611,7 @@ export function AdminPlansManagement() {
       case "company-active":
         return confirm.nextActive ? "Activar compañía" : "Desactivar compañía"
       case "plan-markup":
-        return "Cambiar porcentaje"
+        return "Cambiar markup"
       case "plan-active":
         return confirm.nextActive ? "Activar plan" : "Desactivar plan"
       case "plan-destination":
@@ -558,12 +634,14 @@ export function AdminPlansManagement() {
     switch (confirm.type) {
       case "company-active":
         return confirm.nextActive
-          ? `Vas a activar “${confirm.company.name}”. Volverá a aparecer en las cotizaciones.`
-          : `Vas a desactivar “${confirm.company.name}”. No va a aparecer en las cotizaciones nuevas.`
-      case "plan-markup":
-        return confirm.nextMarkup === 0
-          ? `Vas a sacar el porcentaje adicional de “${confirm.plan.name}”.`
-          : `Vas a poner un ${confirm.nextMarkup}% de porcentaje en “${confirm.plan.name}” (ahora tiene ${parsePlanMarkup(confirm.plan.markup)}%). Ese porcentaje se suma al precio final en todos los destinos.`
+          ? `Vas a activar “${mapCompanyToFormalCompany(confirm.company.name)}”. Volverá a aparecer en las cotizaciones.`
+          : `Vas a desactivar “${mapCompanyToFormalCompany(confirm.company.name)}”. No va a aparecer en las cotizaciones nuevas.`
+      case "plan-markup": {
+        const total = getPlanMarkupTotal(confirm.next)
+        return total === 0
+          ? `Vas a dejar el markup de “${confirm.plan.name}” en 0% (productor, organizador y gastos operativos en 0).`
+          : `Vas a guardar el markup de “${confirm.plan.name}”: productor ${confirm.next.producer_markup}%, organizador ${confirm.next.organizer_markup}%, gastos operativos ${confirm.next.operating_expenses}%. Total: ${total}% (ese total se aplica al precio final).`
+      }
       case "plan-active":
         return confirm.nextActive
           ? `Vas a volver a activar “${confirm.plan.name}”.`
@@ -574,10 +652,12 @@ export function AdminPlansManagement() {
           : `Vas a desactivar el destino “${destinationLabel(confirm.destinationId)}” para “${confirm.plan.name}”.`
       case "plan-delete":
         return `Vas a dar de baja “${confirm.plan.name}”. Después lo podés volver a activar marcando “Ver planes inactivos”.`
-      case "plan-create":
+      case "plan-create": {
+        const total = getPlanMarkupTotal(confirm.data)
         return confirm.isFirstPlanForCompany
-          ? `Vas a crear el primer plan de “${confirm.companyName}”. Ojo: a partir de ahora esa compañía solo va a cotizar los planes que cargues acá y actives por destino. Al crearlos, los destinos quedan apagados hasta que los actives.`
-          : `Vas a crear “${confirm.data.name}” para “${confirm.companyName}”. Los destinos empiezan apagados: después los activás desde la tabla.`
+          ? `Vas a crear el primer plan de “${confirm.companyName}” con markup total ${total}% (productor ${confirm.data.producer_markup}%, organizador ${confirm.data.organizer_markup}%, gastos ${confirm.data.operating_expenses}%). Ojo: a partir de ahora esa compañía solo va a cotizar los planes que cargues acá y actives por destino. Al crearlos, los destinos quedan apagados hasta que los actives.`
+          : `Vas a crear “${confirm.data.name}” para “${confirm.companyName}” con markup total ${total}%. Los destinos empiezan apagados: después los activás desde la tabla.`
+      }
       case "bulk-destination":
         return confirm.nextEnabled
           ? `Vas a activar “${destinationLabel(confirm.destinationId)}” en ${confirm.planIds.length} plan${confirm.planIds.length === 1 ? "" : "es"} seleccionados.`
@@ -599,18 +679,24 @@ export function AdminPlansManagement() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Layers className="h-6 w-6" />
-            Gestión de planes
+    <div className="flex flex-col gap-4 sm:gap-6 min-w-0 w-full max-w-full overflow-x-hidden">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between min-w-0">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <Layers className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
+            <span className="truncate">Gestión de planes</span>
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Acá activás compañías, armás el catálogo de planes, definís el porcentaje y en qué destinos se ofrecen.
+            Acá activás compañías, armás el catálogo de planes, definís el markup y en qué destinos se ofrecen.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => void reloadAll()} disabled={isLoadingCompanies || isLoadingPlans}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 self-start"
+          onClick={() => void reloadAll()}
+          disabled={isLoadingCompanies || isLoadingPlans}
+        >
           <RefreshCw
             className={`h-4 w-4 mr-2 ${isLoadingCompanies || isLoadingPlans ? "animate-spin" : ""}`}
           />
@@ -618,7 +704,7 @@ export function AdminPlansManagement() {
         </Button>
       </div>
 
-      <Tabs defaultValue="planes" className="w-full">
+      <Tabs defaultValue="planes" className="w-full min-w-0">
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="companias">Compañías</TabsTrigger>
           <TabsTrigger value="planes">Planes</TabsTrigger>
@@ -673,7 +759,9 @@ export function AdminPlansManagement() {
                       ) : (
                         companies.map((company) => (
                           <TableRow key={company.id}>
-                            <TableCell className="font-medium">{company.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {mapCompanyToFormalCompany(company.name)}
+                            </TableCell>
                             <TableCell>
                               <Badge variant="outline">{company.slug}</Badge>
                             </TableCell>
@@ -708,23 +796,23 @@ export function AdminPlansManagement() {
         </TabsContent>
 
         {/* ── Planes ── */}
-        <TabsContent value="planes" className="mt-4 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
+        <TabsContent value="planes" className="mt-4 space-y-4 min-w-0">
+          <Card className="min-w-0 overflow-hidden">
+            <CardHeader className="pb-3 px-4 sm:px-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
+                <div className="min-w-0">
                   <CardTitle className="text-base">Planes</CardTitle>
                   <CardDescription>
-                    Cargá los planes, el porcentaje que se suma al precio y en qué destinos se muestran.
+                    Cargá los planes, el markup (productor + organizador + gastos operativos) y en qué destinos se muestran.
                   </CardDescription>
                 </div>
-                <Button size="sm" onClick={() => setCreateOpen(true)}>
+                <Button size="sm" className="shrink-0 self-start" onClick={() => setCreateOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nuevo plan
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 px-4 sm:px-6 min-w-0">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
                 <div className="w-full lg:w-48">
                   <Label className="text-xs text-muted-foreground">Compañía</Label>
@@ -736,7 +824,7 @@ export function AdminPlansManagement() {
                       <SelectItem value="all">Todas</SelectItem>
                       {companies.map((c) => (
                         <SelectItem key={c.id} value={String(c.id)}>
-                          {c.name}
+                          {mapCompanyToFormalCompany(c.name)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -779,7 +867,7 @@ export function AdminPlansManagement() {
                 </label>
               </div>
 
-              <p className="text-xs text-muted-foreground flex items-center gap-2">
+              <p className="text-xs text-muted-foreground flex flex-wrap items-center gap-2">
                 <span>
                   {plansTotal === 0
                     ? "No hay planes para mostrar"
@@ -797,6 +885,23 @@ export function AdminPlansManagement() {
                   </span>
                 )}
               </p>
+
+              {selectablePlans.length > 0 && (
+                <label className="md:hidden flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={
+                      allSelectableSelected
+                        ? true
+                        : someSelectableSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    disabled={!!savingKey || isConfirming}
+                    onCheckedChange={(v) => toggleSelectAllVisible(v === true)}
+                  />
+                  Seleccionar todos los visibles
+                </label>
+              )}
 
               {selectedPlanIds.length > 0 && (
                 <div className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-primary/5 p-3 sm:flex-row sm:items-end sm:justify-between">
@@ -865,21 +970,204 @@ export function AdminPlansManagement() {
                   ))}
                 </div>
               ) : (
-                <div className="relative">
-                  {isLoadingPlans && (
-                    <div className="absolute inset-x-0 -top-1 z-10 h-0.5 overflow-hidden rounded-full bg-muted">
-                      <div className="h-full w-1/3 animate-pulse bg-primary/70" />
-                    </div>
-                  )}
-                  <div
-                    className={`rounded-md border overflow-x-auto transition-opacity ${
-                      isLoadingPlans ? "opacity-60 pointer-events-none" : ""
-                    }`}
-                  >
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-10">
+                <>
+                  {/* ── Mobile: cards ── */}
+                  <div className={`md:hidden space-y-3 ${isLoadingPlans ? "opacity-60 pointer-events-none" : ""}`}>
+                    {filteredPlans.length === 0 ? (
+                      <p className="text-center text-sm text-muted-foreground py-8">
+                        No hay planes con estos filtros
+                      </p>
+                    ) : (
+                      filteredPlans.map((plan) => {
+                        const destinations = normalizeDestinations(plan.destinations)
+                        const producer = parseMarkupPercent(plan.producer_markup)
+                        const organizer = parseMarkupPercent(plan.organizer_markup)
+                        const operating = parseMarkupPercent(plan.operating_expenses)
+                        const markupTotal = getPlanMarkupTotal(plan)
+                        const busy =
+                          savingKey === `plan-${plan.id}` ||
+                          savingKey?.startsWith(`plan-${plan.id}-`) === true ||
+                          (savingKey === "bulk-destination" &&
+                            selectedPlanIds.includes(plan.id))
+                        const selected = selectedPlanIds.includes(plan.id)
+                        return (
+                          <div
+                            key={`m-${plan.id}`}
+                            className={`rounded-lg border p-3 space-y-3 ${
+                              busy
+                                ? "bg-primary/5 border-primary/30"
+                                : selected
+                                  ? "bg-muted/40 border-primary/20"
+                                  : !plan.active
+                                    ? "opacity-60"
+                                    : "bg-card"
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                className="mt-1"
+                                checked={selected}
+                                disabled={!plan.active || !!savingKey || isConfirming}
+                                onCheckedChange={(v) =>
+                                  toggleSelectPlan(plan.id, v === true)
+                                }
+                                aria-label={`Seleccionar ${plan.name}`}
+                              />
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <p className="font-semibold text-sm leading-snug break-words">
+                                    {plan.name}
+                                  </p>
+                                  {!plan.active && (
+                                    <Badge variant="secondary" className="text-[10px]">
+                                      Inactivo
+                                    </Badge>
+                                  )}
+                                  {busy && (
+                                    <Badge
+                                      variant="outline"
+                                      className="gap-1 border-primary/40 text-primary text-[10px]"
+                                    >
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                      Guardando…
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground break-words">
+                                  {mapCompanyToFormalCompany(plan.company_name)}
+                                  <span className="mx-1.5 text-border">·</span>
+                                  <span className="font-mono">{plan.external_plan_id}</span>
+                                </p>
+                              </div>
+                              {plan.active && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                                  disabled={!!savingKey || isConfirming}
+                                  onClick={() => setConfirm({ type: "plan-delete", plan })}
+                                  title="Dar de baja"
+                                >
+                                  {savingKey === `plan-${plan.id}-delete` ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between gap-3 rounded-md bg-muted/40 px-3 py-2">
+                              <div className="min-w-0">
+                                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                  Markup
+                                </p>
+                                <p className="text-sm font-semibold tabular-nums">
+                                  Total {Number(markupTotal.toFixed(2))}%
+                                </p>
+                                <p className="text-[11px] text-muted-foreground tabular-nums">
+                                  Prod. {producer}% · Org. {organizer}% · G.O. {operating}%
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="shrink-0"
+                                disabled={!!savingKey || isConfirming}
+                                onClick={() => openMarkupEdit(plan)}
+                              >
+                                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                                Editar
+                              </Button>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs text-muted-foreground">Activo</span>
+                              <div className="inline-flex items-center gap-1.5">
+                                {savingKey === `plan-${plan.id}-active` && (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                                )}
+                                <Switch
+                                  checked={plan.active}
+                                  disabled={!!savingKey || isConfirming}
+                                  onCheckedChange={(checked) =>
+                                    setConfirm({
+                                      type: "plan-active",
+                                      plan,
+                                      nextActive: checked,
+                                    })
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                Destinos
+                              </p>
+                              <div className="grid grid-cols-2 gap-2">
+                                {destinations.map((dest) => {
+                                  const destBusy =
+                                    savingKey ===
+                                    `plan-${plan.id}-dest-${dest.destination_id}`
+                                  return (
+                                    <div
+                                      key={dest.destination_id}
+                                      className={`flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 ${
+                                        destBusy ? "bg-primary/10 border-primary/30" : ""
+                                      }`}
+                                    >
+                                      <span className="text-xs font-medium truncate">
+                                        {destinationLabel(dest.destination_id)}
+                                      </span>
+                                      <div className="inline-flex items-center gap-1 shrink-0">
+                                        {destBusy && (
+                                          <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                        )}
+                                        <Switch
+                                          checked={dest.enabled}
+                                          disabled={
+                                            !!savingKey || isConfirming || !plan.active
+                                          }
+                                          onCheckedChange={(checked) =>
+                                            setConfirm({
+                                              type: "plan-destination",
+                                              plan,
+                                              destinationId: dest.destination_id,
+                                              nextEnabled: checked,
+                                            })
+                                          }
+                                        />
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
+
+                  {/* ── Desktop: tabla ── */}
+                  <div className="relative hidden md:block">
+                    {isLoadingPlans && (
+                      <div className="absolute inset-x-0 -top-1 z-10 h-0.5 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full w-1/3 animate-pulse bg-primary/70" />
+                      </div>
+                    )}
+                    <div
+                      className={`rounded-md border overflow-x-auto transition-opacity ${
+                        isLoadingPlans ? "opacity-60 pointer-events-none" : ""
+                      }`}
+                    >
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-primary border-b-0">
+                        <TableHead className="w-10 bg-primary text-primary-foreground">
                           <Checkbox
                             checked={
                               allSelectableSelected
@@ -895,26 +1183,47 @@ export function AdminPlansManagement() {
                             }
                             onCheckedChange={(v) => toggleSelectAllVisible(v === true)}
                             aria-label="Seleccionar todos los planes visibles"
+                            className="border-primary-foreground data-[state=checked]:bg-primary-foreground data-[state=checked]:text-primary"
                           />
                         </TableHead>
-                        <TableHead>Compañía</TableHead>
-                        <TableHead>Plan</TableHead>
-                        <TableHead>Código</TableHead>
-                        <TableHead className="text-right">% extra</TableHead>
-                        <TableHead className="text-center">Activo</TableHead>
+                        <TableHead className="bg-primary text-primary-foreground">Compañía</TableHead>
+                        <TableHead className="bg-primary text-primary-foreground">Plan</TableHead>
+                        <TableHead className="bg-primary text-primary-foreground">Código</TableHead>
+                        <TableHead
+                          className="text-right bg-primary text-primary-foreground whitespace-nowrap"
+                          title="Productor %"
+                        >
+                          Prod.
+                        </TableHead>
+                        <TableHead
+                          className="text-right bg-primary text-primary-foreground whitespace-nowrap"
+                          title="Organizador %"
+                        >
+                          Org.
+                        </TableHead>
+                        <TableHead
+                          className="text-right bg-primary text-primary-foreground whitespace-nowrap"
+                          title="Gastos operativos %"
+                        >
+                          G.O.
+                        </TableHead>
+                        <TableHead className="text-right bg-primary text-primary-foreground whitespace-nowrap">
+                          Total %
+                        </TableHead>
+                        <TableHead className="text-center bg-primary text-primary-foreground">Activo</TableHead>
                         {PLAN_DESTINATION_OPTIONS.map((d) => (
-                          <TableHead key={d.id} className="text-center text-xs px-2">
+                          <TableHead key={d.id} className="text-center text-xs px-2 bg-primary text-primary-foreground">
                             {d.short}
                           </TableHead>
                         ))}
-                        <TableHead className="w-12" />
+                        <TableHead className="w-12 bg-primary text-primary-foreground" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredPlans.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={7 + PLAN_DESTINATION_OPTIONS.length}
+                            colSpan={10 + PLAN_DESTINATION_OPTIONS.length}
                             className="text-center text-muted-foreground py-8"
                           >
                             No hay planes con estos filtros
@@ -923,6 +1232,10 @@ export function AdminPlansManagement() {
                       ) : (
                         filteredPlans.map((plan) => {
                           const destinations = normalizeDestinations(plan.destinations)
+                          const producer = parseMarkupPercent(plan.producer_markup)
+                          const organizer = parseMarkupPercent(plan.organizer_markup)
+                          const operating = parseMarkupPercent(plan.operating_expenses)
+                          const markupTotal = getPlanMarkupTotal(plan)
                           const busy =
                             savingKey === `plan-${plan.id}` ||
                             savingKey?.startsWith(`plan-${plan.id}-`) === true ||
@@ -955,12 +1268,7 @@ export function AdminPlansManagement() {
                                 />
                               </TableCell>
                               <TableCell className="font-medium whitespace-nowrap">
-                                <div className="flex flex-col">
-                                  <span>{plan.company_name}</span>
-                                  <span className="text-[11px] text-muted-foreground">
-                                    {plan.company_slug}
-                                  </span>
-                                </div>
+                                {mapCompanyToFormalCompany(plan.company_name)}
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -984,17 +1292,32 @@ export function AdminPlansManagement() {
                               <TableCell className="font-mono text-xs">
                                 {plan.external_plan_id}
                               </TableCell>
+                              <TableCell className="text-right tabular-nums whitespace-nowrap">
+                                {producer}%
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums whitespace-nowrap">
+                                {organizer}%
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums whitespace-nowrap">
+                                {operating}%
+                              </TableCell>
                               <TableCell className="text-right">
-                                <Input
-                                  key={`${plan.id}-${plan.markup}-${markupInputKey}`}
-                                  type="number"
-                                  min={0}
-                                  step={0.5}
-                                  className="h-8 w-20 text-right ml-auto"
-                                  defaultValue={parsePlanMarkup(plan.markup)}
-                                  disabled={!!savingKey || isConfirming}
-                                  onBlur={(e) => requestMarkupChange(plan, e.target.value)}
-                                />
+                                <div className="inline-flex items-center justify-end gap-2">
+                                  <span className="font-semibold tabular-nums whitespace-nowrap">
+                                    {Number(markupTotal.toFixed(2))}%
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0"
+                                    disabled={!!savingKey || isConfirming}
+                                    onClick={() => openMarkupEdit(plan)}
+                                    title="Editar markup"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
                               </TableCell>
                               <TableCell className="text-center">
                                 <div className="inline-flex items-center justify-center gap-1.5">
@@ -1076,11 +1399,174 @@ export function AdminPlansManagement() {
                   </Table>
                   </div>
                 </div>
+
+
+                {/* Controles de paginación */}
+                {plansTotal > pageSize && (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 border-t">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Mostrando {Math.min((currentPage - 1) * pageSize + 1, plansTotal)} a{" "}
+                      {Math.min(currentPage * pageSize, plansTotal)} de {plansTotal} planes
+                    </p>
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage === 1 || isLoadingPlans}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      >
+                        Anterior
+                      </Button>
+                      <div className="hidden sm:flex items-center gap-1">
+                        {Array.from({ length: Math.ceil(plansTotal / pageSize) }, (_, i) => i + 1)
+                          .filter((page) => {
+                            // Mostrar primera, última, actual y 2 páginas alrededor
+                            const totalPages = Math.ceil(plansTotal / pageSize)
+                            return (
+                              page === 1 ||
+                              page === totalPages ||
+                              Math.abs(page - currentPage) <= 1
+                            )
+                          })
+                          .map((page, idx, arr) => {
+                            // Agregar "..." si hay saltos
+                            const prev = arr[idx - 1]
+                            const showEllipsis = prev && page - prev > 1
+                            return (
+                              <div key={page} className="flex items-center gap-1">
+                                {showEllipsis && (
+                                  <span className="px-2 text-sm text-muted-foreground">
+                                    ...
+                                  </span>
+                                )}
+                                <Button
+                                  variant={page === currentPage ? "default" : "outline"}
+                                  size="sm"
+                                  className="w-9 h-9 p-0"
+                                  disabled={isLoadingPlans}
+                                  onClick={() => setCurrentPage(page)}
+                                >
+                                  {page}
+                                </Button>
+                              </div>
+                            )
+                          })}
+                      </div>
+                      <span className="sm:hidden text-xs text-muted-foreground tabular-nums px-1">
+                        {currentPage} / {Math.ceil(plansTotal / pageSize)}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                          currentPage >= Math.ceil(plansTotal / pageSize) || isLoadingPlans
+                        }
+                        onClick={() =>
+                          setCurrentPage((p) =>
+                            Math.min(Math.ceil(plansTotal / pageSize), p + 1)
+                          )
+                        }
+                      >
+                        Siguiente
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
               )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog editar markup */}
+      <Dialog
+        open={markupEditPlan !== null}
+        onOpenChange={(open) => {
+          if (!open && !isConfirming) setMarkupEditPlan(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar markup</DialogTitle>
+            <DialogDescription>
+              {markupEditPlan
+                ? `Plan “${markupEditPlan.name}”. El total se suma de los tres valores y se aplica al precio final.`
+                : "Definí los tres valores del markup."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <div className="grid gap-1">
+                <Label htmlFor="edit-productor" className="text-xs text-muted-foreground">
+                  Productor %
+                </Label>
+                <Input
+                  id="edit-productor"
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={editProductor}
+                  onChange={(e) => setEditProductor(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor="edit-organizador" className="text-xs text-muted-foreground">
+                  Organizador %
+                </Label>
+                <Input
+                  id="edit-organizador"
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={editOrganizador}
+                  onChange={(e) => setEditOrganizador(e.target.value)}
+                />
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor="edit-gastos" className="text-xs text-muted-foreground">
+                  Gastos operativos %
+                </Label>
+                <Input
+                  id="edit-gastos"
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={editGastos}
+                  onChange={(e) => setEditGastos(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Total a aplicar: </span>
+              <span className="font-semibold tabular-nums">
+                {getPlanMarkupTotal({
+                  producer_markup: parseMarkupField(editProductor) ?? 0,
+                  organizer_markup: parseMarkupField(editOrganizador) ?? 0,
+                  operating_expenses: parseMarkupField(editGastos) ?? 0,
+                })}
+                %
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Al guardar se confirma el cambio. El total (suma de los tres) se aplica al precio final en cotización.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMarkupEditPlan(null)}
+              disabled={isConfirming}
+            >
+              Cancelar
+            </Button>
+            <Button type="button" onClick={submitMarkupEdit} disabled={isConfirming}>
+              Continuar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog alta */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -1103,7 +1589,7 @@ export function AdminPlansManagement() {
                     .filter((c) => c.active)
                     .map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
-                        {c.name}
+                        {mapCompanyToFormalCompany(c.name)}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -1128,17 +1614,56 @@ export function AdminPlansManagement() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="create-markup">Porcentaje extra (opcional)</Label>
-              <Input
-                id="create-markup"
-                type="number"
-                min={0}
-                step={0.5}
-                value={createMarkup}
-                onChange={(e) => setCreateMarkup(e.target.value)}
-              />
+              <Label>Markup (opcional)</Label>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-1">
+                  <Label htmlFor="create-productor" className="text-xs text-muted-foreground">
+                    Productor %
+                  </Label>
+                  <Input
+                    id="create-productor"
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={createProductor}
+                    onChange={(e) => setCreateProductor(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="create-organizador" className="text-xs text-muted-foreground">
+                    Organizador %
+                  </Label>
+                  <Input
+                    id="create-organizador"
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={createOrganizador}
+                    onChange={(e) => setCreateOrganizador(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="create-gastos" className="text-xs text-muted-foreground">
+                    Gastos operativos %
+                  </Label>
+                  <Input
+                    id="create-gastos"
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={createGastos}
+                    onChange={(e) => setCreateGastos(e.target.value)}
+                  />
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Se suma al precio final. Si no corresponde, dejalo en 0.
+                Total:{" "}
+                {getPlanMarkupTotal({
+                  producer_markup: parseMarkupField(createProductor) ?? 0,
+                  organizer_markup: parseMarkupField(createOrganizador) ?? 0,
+                  operating_expenses: parseMarkupField(createGastos) ?? 0,
+                })}
+                % (suma de los tres; se aplica al precio final en cotización).
               </p>
             </div>
           </div>
@@ -1156,7 +1681,7 @@ export function AdminPlansManagement() {
       <AlertDialog
         open={confirm !== null}
         onOpenChange={(open) => {
-          if (!open) closeConfirm(confirm?.type === "plan-markup")
+          if (!open) closeConfirm()
         }}
       >
         <AlertDialogContent>

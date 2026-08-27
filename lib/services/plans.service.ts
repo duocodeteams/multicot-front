@@ -25,10 +25,35 @@ export const PLAN_DESTINATION_OPTIONS: {
   { id: 5, label: "Norteamérica", short: "NA" },
 ]
 
-export function parsePlanMarkup(markup: string | number | null | undefined): number {
-  if (markup === null || markup === undefined || markup === "") return 0
-  const n = typeof markup === "number" ? markup : Number(markup)
+/** Parsea un % de markup que puede venir como string o number desde el API. */
+export function parseMarkupPercent(value: string | number | null | undefined): number {
+  if (value === null || value === undefined || value === "") return 0
+  const n = typeof value === "number" ? value : Number(value)
   return Number.isFinite(n) ? n : 0
+}
+
+/** Valida un input de formulario (≥ 0). Vacío = 0. */
+export function parseMarkupField(value: string): number | null {
+  const trimmed = value.trim()
+  if (trimmed === "") return 0
+  const n = Number(trimmed)
+  if (Number.isNaN(n) || n < 0) return null
+  return n
+}
+
+/** Total admin = suma de los tres % (misma fórmula que el backend). */
+export function getPlanMarkupTotal(plan: {
+  producer_markup?: string | number | null
+  organizer_markup?: string | number | null
+  operating_expenses?: string | number | null
+}): number {
+  return Number(
+    (
+      parseMarkupPercent(plan.producer_markup) +
+      parseMarkupPercent(plan.organizer_markup) +
+      parseMarkupPercent(plan.operating_expenses)
+    ).toFixed(2)
+  )
 }
 
 export async function listPlans(params?: ListPlansParams): Promise<ListPlansResponse> {

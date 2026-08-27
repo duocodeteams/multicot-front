@@ -195,8 +195,19 @@ function PlanSelectorCard({
             className="text-xl font-black leading-none"
             style={{ color: selected ? theme.labelColor : "hsl(var(--foreground))" }}
           >
-            USD {formatNumber(plan.price)}
+            {plan.priceUsd !== undefined
+              ? `USD ${formatNumber(plan.priceUsd)}`
+              : plan.priceArs !== undefined
+                ? `ARS ${formatNumber(plan.priceArs)}`
+                : `USD ${formatNumber(plan.price)}`}
           </span>
+          {plan.priceUsd !== undefined &&
+            plan.priceArs !== undefined &&
+            plan.exchange_rate !== 2 && (
+            <span className="text-[10px] text-muted-foreground">
+              ARS {formatNumber(plan.priceArs)}
+            </span>
+          )}
           <span className="text-[10px] text-muted-foreground">
             {plan.maxCoverage} cobertura máx.
           </span>
@@ -210,15 +221,32 @@ function PlanSelectorCard({
 
 const FIXED_ROWS: { key: string; label: string; getValue: (p: Plan) => string }[] = [
   { key: "company", label: "Compañía", getValue: (p) => p.empresaCotizacion },
-  { key: "price", label: "Precio Total", getValue: (p) => `USD ${formatNumber(p.price)}` },
-  { key: "priceARS", label: "Precio Total (ARS)", getValue: (p) => {
-    if (p.exchange_rate) {
-      const ars = Math.round(p.price * p.exchange_rate)
-      return `${formatARS(ars)}\n(TC: ${formatNumber(p.exchange_rate)})`
-    }
-    return "-"
-  } },
-  { key: "priceDay", label: "Precio / día", getValue: (p) => `USD ${formatNumber(p.pricePerDay)}` },
+  {
+    key: "price",
+    label: "Precio Total (USD)",
+    getValue: (p) =>
+      p.priceUsd !== undefined ? `USD ${formatNumber(p.priceUsd)}` : "-",
+  },
+  {
+    key: "priceARS",
+    label: "Precio Total (ARS)",
+    getValue: (p) => {
+      if (p.priceArs === undefined || p.exchange_rate === 2) return "-"
+      const tc =
+        p.priceUsd !== undefined && p.exchange_rate && p.exchange_rate > 2
+          ? `\n(TC: ${formatNumber(p.exchange_rate)})`
+          : ""
+      return `${formatARS(p.priceArs)}${tc}`
+    },
+  },
+  {
+    key: "priceDay",
+    label: "Precio / día",
+    getValue: (p) => {
+      const currency = p.priceUsd !== undefined ? "USD" : "ARS"
+      return `${currency} ${formatNumber(p.pricePerDay)}`
+    },
+  },
   { key: "maxCov", label: "Cobertura Máxima", getValue: (p) => p.maxCoverage },
 ]
 
@@ -268,14 +296,24 @@ function ComparisonTable({
                     )}
                     <span
                       className="text-xl font-black leading-none"
-                      style={{ color: selected ? theme.labelColor : "hsl(var(--foreground))" }}
+                      style={{ color: theme.labelColor }}
                     >
-                      USD {formatNumber(plan.price)}
+                      {plan.priceUsd !== undefined
+                        ? `USD ${formatNumber(plan.priceUsd)}`
+                        : plan.priceArs !== undefined
+                          ? `ARS ${formatNumber(plan.priceArs)}`
+                          : `USD ${formatNumber(plan.price)}`}
                     </span>
-                    {plan.exchange_rate && (
-                      <span className="text-[13px] font-semibold text-green-700">
-                        {formatARS(Math.round(plan.price * plan.exchange_rate))}
-                        <span className="text-[10px] text-muted-foreground ml-1">(TC: {formatNumber(plan.exchange_rate)})</span>
+                    {plan.priceUsd !== undefined &&
+                      plan.priceArs !== undefined &&
+                      plan.exchange_rate !== 2 && (
+                      <span className="text-[13px] font-semibold text-foreground/80">
+                        {formatARS(plan.priceArs)}
+                        {plan.exchange_rate && plan.exchange_rate > 2 ? (
+                          <span className="text-[10px] text-muted-foreground ml-1">
+                            (TC: {formatNumber(plan.exchange_rate)})
+                          </span>
+                        ) : null}
                       </span>
                     )}
                     <span className="text-[10px] text-muted-foreground">
@@ -449,14 +487,7 @@ export function PlanComparisonView({
         ${selectedPlansSnap.map((plan, i) => {
         const t = themes[i]
         const isPrice = row.key === "price"
-        if (row.key === "priceARS") {
-          if (plan.exchange_rate) {
-            const ars = Math.round(plan.price * plan.exchange_rate)
-            return `<td style=\"padding:8px 12px;font-weight:700;font-size:13px;color:#1e293b;border:1px solid #e2e8f0;\">${formatARS(ars)}<br/><span style=\"font-size:10px;color:#64748b;\">(TC: ${formatNumber(plan.exchange_rate)})</span></td>`
-          }
-          return `<td style=\"padding:8px 12px;font-size:13px;color:#64748b;border:1px solid #e2e8f0;\">-</td>`
-        }
-        return `<td style=\"padding:8px 12px;font-weight:${isPrice ? "800" : "500"};font-size:${isPrice ? "14px" : "12px"};color:${isPrice ? t.labelColor : "#1e293b"};border:1px solid #e2e8f0;\">${row.getValue(plan)}</td>`
+        return `<td style=\"padding:8px 12px;font-weight:${isPrice ? "800" : "500"};font-size:${isPrice ? "14px" : "12px"};color:${isPrice ? t.labelColor : "#1e293b"};border:1px solid #e2e8f0;white-space:pre-line;\">${row.getValue(plan)}</td>`
       }).join("")}
       </tr>`
     ).join("")

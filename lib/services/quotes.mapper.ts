@@ -57,16 +57,36 @@ export function mapQuotationDataToApi(data: QuotationData): CreateQuoteRequest {
   }
 }
 
-/** * Mapea la compañia del back y la convierte a un formato legible para el frontend
+/**
+ * Mapea el nombre/slug de compañía del back a un nombre comercial legible.
  */
-export function mapCompanyToFormalCompany (company: string): string {
+export function mapCompanyToFormalCompany(company: string): string {
   const mapping: Record<string, string> = {
-    "Cardinal": "Cardinal Assistance",
-    "GoAssistance": "GO! Assistance",
-    "New Travel": "New Travel Assistance",
-    "Terrawind": "Terrawind Global Protection",
-    "Universal": "Universal Assistance",
+    cardinal: "Cardinal Assistance",
+    cardinalassistance: "Cardinal Assistance",
+    goassistance: "GO! Assistance",
+    go: "GO! Assistance",
+    newtravel: "New Travel Assistance",
+    newtravelassistance: "New Travel Assistance",
+    terrawind: "Terrawind Global Protection",
+    terrawindglobalprotection: "Terrawind Global Protection",
+    universal: "Universal Assistance",
+    universalassistance: "Universal Assistance",
+    pax: "PAX Assistance",
+    paxassistance: "PAX Assistance",
+    interassist: "InterAssist",
+    inter: "InterAssist",
+    interassistance: "InterAssist",
+    omint: "Omint",
+    omintassistance: "Omint",
+    omintassist: "Omint",
   }
 
-  return mapping[company] || company
+  const key = company
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+
+  return mapping[key] || company
 }

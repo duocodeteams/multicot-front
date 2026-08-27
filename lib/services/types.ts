@@ -53,9 +53,9 @@ export interface QuotePlan {
   coverage_amount: number | string // Puede venir como string desde el backend
   benefits: QuoteBenefit[]
   net_rate: number | string // Puede venir como string desde el backend
-  final_rate_usd: number | string // Puede venir como string desde el backend
-  exchange_rate: number | string // Puede venir como string desde el backend
-  final_rate: number | string // Puede venir como string desde el backend
+  final_rate_usd?: number | string | null
+  exchange_rate?: number | string | null
+  final_rate?: number | string | null
 }
 
 export interface CreateQuoteResponse {
@@ -267,8 +267,12 @@ export interface PlanResponse {
   company_name: string
   external_plan_id: string
   name: string
-  /** Puede venir como string desde el API ("15"). */
-  markup: string | number
+  /** Markup productor (%). Puede venir como string desde el API. */
+  producer_markup: string | number
+  /** Markup organizador (%). */
+  organizer_markup: string | number
+  /** Gastos operativos (%). */
+  operating_expenses: string | number
   active: boolean
   destinations: PlanDestination[]
 }
@@ -277,12 +281,16 @@ export interface CreatePlanRequest {
   company_id: number
   external_plan_id: string
   name: string
-  markup?: number
+  producer_markup?: number
+  organizer_markup?: number
+  operating_expenses?: number
 }
 
 export interface UpdatePlanRequest {
   name?: string
-  markup?: number
+  producer_markup?: number
+  organizer_markup?: number
+  operating_expenses?: number
   active?: boolean
   destinations?: PlanDestination[]
 }

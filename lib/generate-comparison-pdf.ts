@@ -100,14 +100,29 @@ export async function downloadComparisonPDF(
             display:inline-block;
           ">
             <div style="font-size:9px;color:rgba(255,255,255,.75);font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px;">Precio total</div>
-            <div style="font-size:18px;font-weight:900;color:#ffffff;line-height:1;">USD ${formatNumber(p.price)}</div>
+            <div style="font-size:18px;font-weight:900;color:#ffffff;line-height:1;">${
+              p.priceUsd !== undefined
+                ? `USD ${formatNumber(p.priceUsd)}`
+                : p.priceArs !== undefined
+                  ? `ARS ${formatNumber(p.priceArs)}`
+                  : `USD ${formatNumber(p.price)}`
+            }</div>
+            ${
+              p.priceUsd !== undefined &&
+              p.priceArs !== undefined &&
+              p.exchange_rate !== 2
+                ? `<div style="font-size:10px;color:rgba(255,255,255,.8);margin-top:2px;">ARS ${formatNumber(p.priceArs)}</div>`
+                : ""
+            }
           </div>
 
           <!-- Datos secundarios -->
           <div style="display:flex;gap:12px;margin-top:10px;">
             <div>
               <div style="font-size:8px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Por día</div>
-              <div style="font-size:11px;font-weight:700;color:#1e293b;">USD ${formatNumber(p.pricePerDay)}</div>
+              <div style="font-size:11px;font-weight:700;color:#1e293b;">${
+                p.priceUsd !== undefined ? "USD" : "ARS"
+              } ${formatNumber(p.pricePerDay)}</div>
             </div>
             <div>
               <div style="font-size:8px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Cob. máx.</div>

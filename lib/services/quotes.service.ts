@@ -12,5 +12,6 @@ import type { CreateQuoteRequest, CreateQuoteResponse } from "./types"
  */
 export async function createQuote(data: CreateQuoteRequest): Promise<CreateQuoteResponse> {
   const response = await apiClient.post<CreateQuoteResponse>("/v1/quotes", data)
+  console.log("[cotización] planes:", response.data.plans)
   return response.data
 }

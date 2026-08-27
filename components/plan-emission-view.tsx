@@ -13,6 +13,9 @@ export type SelectedPlan = {
   name: string
   price: number
   pricePerDay: number
+  priceUsd?: number
+  priceArs?: number
+  exchange_rate?: number
   badge: string | null
   coverage: string[]
   maxCoverage: string
@@ -150,11 +153,26 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
             <div className="rounded-lg bg-primary/8 border border-primary/15 p-4">
               <p className="text-xs text-muted-foreground mb-1">Precio de venta (PVP)</p>
               <p className="text-3xl font-bold text-foreground">
-                USD {formatNumber(plan.price)}
+                {plan.priceUsd !== undefined
+                  ? `USD ${formatNumber(plan.priceUsd)}`
+                  : plan.priceArs !== undefined
+                    ? `ARS ${formatNumber(plan.priceArs)}`
+                    : `USD ${formatNumber(plan.price)}`}
               </p>
+              {plan.priceUsd !== undefined &&
+                plan.priceArs !== undefined &&
+                plan.exchange_rate !== 2 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  ARS {formatNumber(plan.priceArs)}
+                  {plan.exchange_rate && plan.exchange_rate > 2
+                    ? ` · TC ${formatNumber(plan.exchange_rate)}`
+                    : ""}
+                </p>
+              )}
               {days > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  USD {formatNumber(plan.pricePerDay)} / día por persona
+                  {plan.priceUsd !== undefined ? "USD" : "ARS"}{" "}
+                  {formatNumber(plan.pricePerDay)} / día por persona
                 </p>
               )}
               <div className="mt-3 pt-3 border-t border-primary/10 text-xs">
