@@ -119,9 +119,10 @@ const updatePassengerAge = (index: number, age: string) => {
     }
 
     if (isMultiTrip) {
+      // 365 días inclusive: p. ej. 01/09/2026 → 31/08/2027
       setTempRange({
         from: range.from,
-        to: addDays(range.from, 366),
+        to: addDays(range.from, 364),
       })
       return
     }

@@ -28,6 +28,7 @@ export interface HealthCheckResponse {
 // ==================== COTIZACIONES ====================
 
 export type TripType = "unico_viaje" | "multiviaje" | "larga_estadia"
+export type DaysRange = 30 | 60 | 90
 export type DestinationId = 1 | 2 | 3 | 4 | 5
 
 export interface CreateQuoteRequest {
@@ -37,6 +38,8 @@ export interface CreateQuoteRequest {
   origin: string // Código de país (ej: "AR")
   destination_id: DestinationId
   trip_type: TripType
+  /** Días corridos máximos del anual. Solo si trip_type es "multiviaje". */
+  days_range?: DaysRange
 }
 
 export interface QuoteBenefit {

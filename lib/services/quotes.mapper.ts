@@ -3,7 +3,7 @@
  */
 
 import type { QuotationData } from "@/components/quotation-form"
-import type { CreateQuoteRequest, DestinationId, TripType } from "./types"
+import type { CreateQuoteRequest, DaysRange, DestinationId, TripType } from "./types"
 
 /**
  * Mapea el destino del formulario al destination_id de la API
@@ -44,17 +44,34 @@ export function mapTripTypeToApi(tipoViaje: string): TripType {
 }
 
 /**
+ * Extrae days_range (30 | 60 | 90) de MULTI_TRIP30 / MULTI_TRIP60 / MULTI_TRIP90.
+ */
+export function mapDaysRange(tipoViaje: string): DaysRange | undefined {
+  const match = tipoViaje.match(/^MULTI_TRIP(30|60|90)$/)
+  if (!match) return undefined
+  return Number(match[1]) as DaysRange
+}
+
+/**
  * Convierte los datos del formulario al formato requerido por la API
  */
 export function mapQuotationDataToApi(data: QuotationData): CreateQuoteRequest {
-  return {
+  const trip_type = mapTripTypeToApi(data.tipoViaje)
+  const request: CreateQuoteRequest = {
     departure_date: data.desde,
     return_date: data.hasta,
     ages: data.edades.map(age => parseInt(age, 10)),
     origin: data.origen,
     destination_id: mapDestinationToId(data.destino),
-    trip_type: mapTripTypeToApi(data.tipoViaje),
+    trip_type,
   }
+
+  if (trip_type === "multiviaje") {
+    const days_range = mapDaysRange(data.tipoViaje)
+    if (days_range) request.days_range = days_range
+  }
+
+  return request
 }
 
 /**

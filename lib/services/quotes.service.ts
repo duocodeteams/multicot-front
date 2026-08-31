@@ -11,6 +11,7 @@ import type { CreateQuoteRequest, CreateQuoteResponse } from "./types"
  * Obtiene cotizaciones de todas las compañías disponibles
  */
 export async function createQuote(data: CreateQuoteRequest): Promise<CreateQuoteResponse> {
+  console.log("[cotización] request:", data)
   const response = await apiClient.post<CreateQuoteResponse>("/v1/quotes", data)
   console.log("[cotización] planes:", response.data.plans)
   return response.data
