@@ -1104,6 +1104,10 @@ body {
   width: 1px;
 }
 
+.w-fit {
+  width: fit-content;
+}
+
 .min-w-0 {
   min-width: 0;
 }
@@ -2009,6 +2013,11 @@ body {
   background-color: #ffffff40;
 }
 
+.bg-emerald-600 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(5 150 105 / var(--tw-bg-opacity, 1));
+}
+
 .bg-gradient-to-r {
   background-image: linear-gradient(to right, var(--tw-gradient-stops));
 }
@@ -2198,6 +2207,11 @@ body {
 .py-8 {
   padding-top: 2rem;
   padding-bottom: 2rem;
+}
+
+.py-0 {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .pb-0 {
@@ -2662,6 +2676,15 @@ body {
 
 .underline {
   text-decoration-line: underline;
+}
+
+.line-through {
+  text-decoration-line: line-through;
+}
+
+.decoration-muted-foreground\/70 {
+  -webkit-text-decoration-color: hsl(var(--muted-foreground) / .7);
+  text-decoration-color: hsl(var(--muted-foreground) / .7);
 }
 
 .underline-offset-2 {
@@ -3182,6 +3205,11 @@ body {
 
 .hover\:bg-sidebar-accent\/60:hover {
   background-color: hsl(var(--sidebar-accent) / .6);
+}
+
+.hover\:bg-emerald-600:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(5 150 105 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:\!text-red-300:hover {

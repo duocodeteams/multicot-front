@@ -191,6 +191,19 @@ function PlanSelectorCard({
           <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             Precio total
           </span>
+          {plan.badge && (
+            <Badge className="w-fit max-w-full truncate border-transparent bg-emerald-600 text-white hover:bg-emerald-600 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0 mb-0.5">
+              {plan.badge}
+            </Badge>
+          )}
+          {plan.badge &&
+            plan.basePriceUsd !== undefined &&
+            plan.priceUsd !== undefined &&
+            plan.basePriceUsd > plan.priceUsd && (
+            <span className="text-[10px] text-muted-foreground line-through">
+              USD {formatNumber(plan.basePriceUsd)}
+            </span>
+          )}
           <span
             className="text-xl font-black leading-none"
             style={{ color: selected ? theme.labelColor : "hsl(var(--foreground))" }}
@@ -206,6 +219,11 @@ function PlanSelectorCard({
             plan.exchange_rate !== 2 && (
             <span className="text-[10px] text-muted-foreground">
               ARS {formatNumber(plan.priceArs)}
+            </span>
+          )}
+          {plan.badge && (
+            <span className="text-[9px] text-muted-foreground/80">
+              La tarifa puede variar
             </span>
           )}
           <span className="text-[10px] text-muted-foreground">
@@ -294,6 +312,19 @@ function ComparisonTable({
                         className="mb-1.5 h-6 w-auto object-contain"
                       />
                     )}
+                    {plan.badge && (
+                      <Badge className="mb-1.5 w-fit max-w-full truncate border-transparent bg-emerald-600 text-white hover:bg-emerald-600 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0">
+                        {plan.badge}
+                      </Badge>
+                    )}
+                    {plan.badge &&
+                      plan.basePriceUsd !== undefined &&
+                      plan.priceUsd !== undefined &&
+                      plan.basePriceUsd > plan.priceUsd && (
+                      <span className="block text-[11px] text-muted-foreground line-through leading-none mb-0.5">
+                        USD {formatNumber(plan.basePriceUsd)}
+                      </span>
+                    )}
                     <span
                       className="text-xl font-black leading-none"
                       style={{ color: theme.labelColor }}
@@ -314,6 +345,11 @@ function ComparisonTable({
                             (TC: {formatNumber(plan.exchange_rate)})
                           </span>
                         ) : null}
+                      </span>
+                    )}
+                    {plan.badge && (
+                      <span className="block text-[9px] text-muted-foreground/80 mt-0.5">
+                        La tarifa puede variar
                       </span>
                     )}
                     <span className="text-[10px] text-muted-foreground">

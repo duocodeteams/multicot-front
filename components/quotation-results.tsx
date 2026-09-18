@@ -37,6 +37,14 @@ export type Plan = {
   priceUsd?: number
   /** Precio en ARS si el back envió final_rate. */
   priceArs?: number
+  /** Precio lista USD (sin promo). */
+  basePriceUsd?: number
+  /** Precio lista ARS (sin promo). */
+  basePriceArs?: number
+  /** % de descuento de la promo activa. */
+  discountPct?: number
+  /** Nombre de la promo; también se refleja en badge. */
+  promotionName?: string | null
   badge: string | null
   coverage: string[]
   maxCoverage: string
@@ -111,6 +119,20 @@ function parseNumber(value: string | number | undefined, defaultValue: number = 
   return defaultValue
 }
 
+/** Texto del badge de promo a partir de los campos del plan. */
+function resolvePromotionBadge(
+  promotionName: string | null | undefined,
+  discountPct: number | undefined
+): string | null {
+  const name = typeof promotionName === "string" ? promotionName.trim() : ""
+  if (name) return name
+  if (discountPct !== undefined && discountPct > 0) {
+    const pct = Number.isInteger(discountPct) ? String(discountPct) : discountPct.toFixed(0)
+    return `${pct}% OFF`
+  }
+  return null
+}
+
 // ── Mapeo desde backend ───────────────────────────────────
 function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | null {
   if (!backendResponse) return null
@@ -120,6 +142,19 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
     const plans: Plan[] = backendResponse.plans.map((planData: any) => {
       const priceUsd = parseOptionalRate(planData.final_rate_usd)
       const priceArs = parseOptionalRate(planData.final_rate)
+      const basePriceUsd = parseOptionalRate(planData.base_rate_usd)
+      const basePriceArs = parseOptionalRate(planData.base_rate)
+      const discountPct = parseOptionalRate(planData.discount_pct)
+      const promotionName =
+        typeof planData.promotion_name === "string" && planData.promotion_name.trim()
+          ? planData.promotion_name.trim()
+          : null
+      const hasDistinctBase =
+        (basePriceUsd !== undefined && priceUsd !== undefined && basePriceUsd > priceUsd) ||
+        (basePriceArs !== undefined && priceArs !== undefined && basePriceArs > priceArs)
+      const badge =
+        resolvePromotionBadge(promotionName, discountPct) ??
+        (hasDistinctBase ? "Promo" : null)
       const price = priceUsd ?? priceArs ?? 0
       const coverageAmount = parseNumber(planData.coverage_amount, 0)
       const benefits = Array.isArray(planData.benefits) ? planData.benefits : []
@@ -150,8 +185,12 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
         price,
         priceUsd,
         priceArs,
+        basePriceUsd,
+        basePriceArs,
+        discountPct,
+        promotionName: badge,
         pricePerDay: days > 0 ? Math.round(price / days) : price,
-        badge: null,
+        badge,
         coverage,
         exceptions,
         maxCoverage: `USD ${formatNumber(coverageAmount)}`,
@@ -481,23 +520,55 @@ function PlanPriceBlock({
   const currencyClass = isDetail
     ? "text-[24px] font-bold"
     : "text-xs font-medium uppercase tracking-wide text-muted-foreground"
+  const hasPromo = Boolean(plan.badge)
+  const showBaseUsd =
+    hasPromo &&
+    plan.basePriceUsd !== undefined &&
+    plan.priceUsd !== undefined &&
+    plan.basePriceUsd > plan.priceUsd
+  const showBaseArs =
+    hasPromo &&
+    !usdOnly &&
+    plan.basePriceArs !== undefined &&
+    plan.priceArs !== undefined &&
+    plan.basePriceArs > plan.priceArs
 
   return (
     <div className={isDetail ? "space-y-2" : "flex flex-col gap-1 min-w-0"}>
+      {hasPromo && plan.badge && (
+        <Badge className="w-fit max-w-full truncate border-transparent bg-emerald-600 text-white hover:bg-emerald-600 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5">
+          {plan.badge}
+        </Badge>
+      )}
       {hasUsd && (
         <div className="flex items-baseline gap-1.5 flex-wrap">
           <span className={currencyClass}>USD</span>
+          {showBaseUsd && (
+            <span className="text-sm text-muted-foreground line-through decoration-muted-foreground/70">
+              {formatNumber(plan.basePriceUsd!)}
+            </span>
+          )}
           <span className={amountClass}>{formatNumber(plan.priceUsd!)}</span>
         </div>
       )}
       {!hasUsd && hasArs && (
         <div className="flex items-baseline gap-1.5 flex-wrap">
           <span className={currencyClass}>ARS</span>
+          {showBaseArs && (
+            <span className="text-sm text-muted-foreground line-through decoration-muted-foreground/70">
+              {formatNumber(plan.basePriceArs!)}
+            </span>
+          )}
           <span className={amountClass}>{formatNumber(plan.priceArs!)}</span>
         </div>
       )}
       {hasUsd && hasArs && (
         <p className="text-xs text-muted-foreground break-words">
+          {showBaseArs && (
+            <span className="line-through decoration-muted-foreground/70 mr-1.5">
+              ARS {formatNumber(plan.basePriceArs!)}
+            </span>
+          )}
           ARS {formatNumber(plan.priceArs!)}
           {showTc && (
             <>
@@ -510,6 +581,11 @@ function PlanPriceBlock({
       {isDetail && days !== undefined && days > 0 && plan.pricePerDay > 0 && (
         <p className="text-[12px] text-muted-foreground">
           {hasUsd ? "USD" : "ARS"} {formatNumber(plan.pricePerDay)} / día
+        </p>
+      )}
+      {hasPromo && (
+        <p className="text-[10px] text-muted-foreground/80 leading-snug">
+          La tarifa puede variar
         </p>
       )}
     </div>

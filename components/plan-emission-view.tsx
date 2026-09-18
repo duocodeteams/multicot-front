@@ -15,6 +15,10 @@ export type SelectedPlan = {
   pricePerDay: number
   priceUsd?: number
   priceArs?: number
+  basePriceUsd?: number
+  basePriceArs?: number
+  discountPct?: number
+  promotionName?: string | null
   exchange_rate?: number
   badge: string | null
   coverage: string[]
@@ -126,8 +130,8 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
                 <div className="flex items-center gap-2 flex-wrap">
                   <CardTitle className="text-lg text-foreground">{plan.name}</CardTitle>
                   {plan.badge && (
-                    <Badge className="bg-primary text-primary-foreground text-[10px]">
-                      ⭐ {plan.badge}
+                    <Badge className="bg-emerald-600 text-white hover:bg-emerald-600 text-[10px] uppercase tracking-wide">
+                      {plan.badge}
                     </Badge>
                   )}
                 </div>
@@ -152,6 +156,23 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
             {/* Precio */}
             <div className="rounded-lg bg-primary/8 border border-primary/15 p-4">
               <p className="text-xs text-muted-foreground mb-1">Precio de venta (PVP)</p>
+              {plan.badge &&
+                plan.basePriceUsd !== undefined &&
+                plan.priceUsd !== undefined &&
+                plan.basePriceUsd > plan.priceUsd && (
+                <p className="text-sm text-muted-foreground line-through mb-0.5">
+                  USD {formatNumber(plan.basePriceUsd)}
+                </p>
+              )}
+              {plan.badge &&
+                plan.priceUsd === undefined &&
+                plan.basePriceArs !== undefined &&
+                plan.priceArs !== undefined &&
+                plan.basePriceArs > plan.priceArs && (
+                <p className="text-sm text-muted-foreground line-through mb-0.5">
+                  ARS {formatNumber(plan.basePriceArs)}
+                </p>
+              )}
               <p className="text-3xl font-bold text-foreground">
                 {plan.priceUsd !== undefined
                   ? `USD ${formatNumber(plan.priceUsd)}`
@@ -163,6 +184,13 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
                 plan.priceArs !== undefined &&
                 plan.exchange_rate !== 2 && (
                 <p className="text-sm text-muted-foreground mt-1">
+                  {plan.badge &&
+                    plan.basePriceArs !== undefined &&
+                    plan.basePriceArs > plan.priceArs && (
+                    <span className="line-through mr-1.5">
+                      ARS {formatNumber(plan.basePriceArs)}
+                    </span>
+                  )}
                   ARS {formatNumber(plan.priceArs)}
                   {plan.exchange_rate && plan.exchange_rate > 2
                     ? ` · TC ${formatNumber(plan.exchange_rate)}`
@@ -173,6 +201,11 @@ export function PlanEmissionView({ plan, quotationData, onBack, onBackToForm }: 
                 <p className="text-xs text-muted-foreground mt-1">
                   {plan.priceUsd !== undefined ? "USD" : "ARS"}{" "}
                   {formatNumber(plan.pricePerDay)} / día por persona
+                </p>
+              )}
+              {plan.badge && (
+                <p className="text-[10px] text-muted-foreground/80 mt-1">
+                  La tarifa puede variar
                 </p>
               )}
               <div className="mt-3 pt-3 border-t border-primary/10 text-xs">

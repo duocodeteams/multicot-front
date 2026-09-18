@@ -56,9 +56,17 @@ export interface QuotePlan {
   coverage_amount: number | string // Puede venir como string desde el backend
   benefits: QuoteBenefit[]
   net_rate: number | string // Puede venir como string desde el backend
+  /** Precio lista sin promo (ARS). */
+  base_rate?: number | string | null
+  /** Precio lista sin promo (USD). */
+  base_rate_usd?: number | string | null
   final_rate_usd?: number | string | null
   exchange_rate?: number | string | null
   final_rate?: number | string | null
+  /** % de descuento de la promo activa (ej. 40.00). */
+  discount_pct?: number | string | null
+  /** Nombre de la promo (ej. "PROMO 40% OFF"). */
+  promotion_name?: string | null
 }
 
 export interface CreateQuoteResponse {
