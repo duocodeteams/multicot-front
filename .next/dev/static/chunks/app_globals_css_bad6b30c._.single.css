@@ -1092,6 +1092,10 @@ body {
   width: auto;
 }
 
+.w-fit {
+  width: fit-content;
+}
+
 .w-full {
   width: 100%;
 }
@@ -1102,10 +1106,6 @@ body {
 
 .w-px {
   width: 1px;
-}
-
-.w-fit {
-  width: fit-content;
 }
 
 .min-w-0 {
@@ -1883,6 +1883,11 @@ body {
   background-color: rgb(236 253 245 / var(--tw-bg-opacity, 1));
 }
 
+.bg-emerald-600 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(5 150 105 / var(--tw-bg-opacity, 1));
+}
+
 .bg-foreground {
   background-color: hsl(var(--foreground));
 }
@@ -2011,11 +2016,6 @@ body {
 
 .bg-white\/25 {
   background-color: #ffffff40;
-}
-
-.bg-emerald-600 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(5 150 105 / var(--tw-bg-opacity, 1));
 }
 
 .bg-gradient-to-r {
@@ -2154,6 +2154,11 @@ body {
   padding-right: 2rem;
 }
 
+.py-0 {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 .py-0\.5 {
   padding-top: .125rem;
   padding-bottom: .125rem;
@@ -2207,11 +2212,6 @@ body {
 .py-8 {
   padding-top: 2rem;
   padding-bottom: 2rem;
-}
-
-.py-0 {
-  padding-top: 0;
-  padding-bottom: 0;
 }
 
 .pb-0 {
@@ -3159,6 +3159,11 @@ body {
   background-color: hsl(var(--destructive) / .9);
 }
 
+.hover\:bg-emerald-600:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(5 150 105 / var(--tw-bg-opacity, 1));
+}
+
 .hover\:bg-foreground\/90:hover {
   background-color: hsl(var(--foreground) / .9);
 }
@@ -3205,11 +3210,6 @@ body {
 
 .hover\:bg-sidebar-accent\/60:hover {
   background-color: hsl(var(--sidebar-accent) / .6);
-}
-
-.hover\:bg-emerald-600:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(5 150 105 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:\!text-red-300:hover {

@@ -44,6 +44,30 @@ export function getCompanyLogo(company: string | undefined | null): string | nul
 }
 
 /**
+ * Prefiere el logo local tipado; si no hay, usa la URL del backend.
+ */
+export function resolvePlanLogo(opts: {
+  companyRaw?: string | null
+  empresaCotizacion?: string | null
+  imagen?: string | null
+}): string | null {
+  return (
+    getCompanyLogo(opts.companyRaw) ??
+    getCompanyLogo(opts.empresaCotizacion) ??
+    opts.imagen ??
+    null
+  )
+}
+
+/** Clases para logo en cabecera de tarjeta de cotización. */
+export const COMPANY_LOGO_CARD_CLASS =
+  "max-h-11 h-11 w-auto max-w-[200px] object-contain object-left"
+
+/** Clases para logo en comparador / modal (un poco más compacto). */
+export const COMPANY_LOGO_COMPACT_CLASS =
+  "max-h-9 h-9 w-auto max-w-[180px] object-contain object-left"
+
+/**
  * Inicial de la compañía, para usar cuando no hay logo disponible.
  */
 export function getCompanyInitial(company: string | undefined | null): string {

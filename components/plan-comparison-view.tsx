@@ -25,6 +25,10 @@ import {
   getCompanyTheme,
   formatNumber,
 } from "@/components/quotation-results"
+import {
+  resolvePlanLogo,
+  COMPANY_LOGO_COMPACT_CLASS,
+} from "@/lib/company-logo"
 
 function formatARS(num: number): string {
   return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(num)
@@ -91,6 +95,7 @@ function PlanSelectorCard({
   onToggle: () => void
 }) {
   const theme = getCompanyTheme(plan.empresaCotizacion)
+  const logoSrc = resolvePlanLogo(plan)
 
   return (
     <button
@@ -125,12 +130,14 @@ function PlanSelectorCard({
         {/* Fila superior: logo/empresa + checkbox */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-col gap-0.5 min-w-0">
-            {plan.imagen ? (
-              <img
-                src={plan.imagen}
-                alt={plan.empresaCotizacion}
-                className="h-6 w-auto object-contain mb-0.5"
-              />
+            {logoSrc ? (
+              <div className="flex h-9 items-center mb-0.5">
+                <img
+                  src={logoSrc}
+                  alt={plan.empresaCotizacion}
+                  className={COMPANY_LOGO_COMPACT_CLASS}
+                />
+              </div>
             ) : (
               <div className="flex items-center gap-1.5">
                 <span
@@ -145,7 +152,7 @@ function PlanSelectorCard({
                 </p>
               </div>
             )}
-            {plan.imagen && (
+            {logoSrc && (
               <p
                 className="text-[9px] font-black uppercase tracking-widest truncate"
                 style={{ color: theme.labelColor }}
@@ -289,6 +296,7 @@ function ComparisonTable({
 
             {selected.map((plan, i) => {
               const theme = themes[i]
+              const logoSrc = resolvePlanLogo(plan)
               return (
                 <th
                   key={plan.id}
@@ -305,12 +313,14 @@ function ComparisonTable({
                     className="p-3"
                     style={{ backgroundColor: theme.priceBg }}
                   >
-                    {plan.imagen && (
-                      <img
-                        src={plan.imagen}
-                        alt={plan.empresaCotizacion}
-                        className="mb-1.5 h-6 w-auto object-contain"
-                      />
+                    {logoSrc && (
+                      <div className="mb-1.5 flex h-9 items-center">
+                        <img
+                          src={logoSrc}
+                          alt={plan.empresaCotizacion}
+                          className={COMPANY_LOGO_COMPACT_CLASS}
+                        />
+                      </div>
                     )}
                     {plan.badge && (
                       <Badge className="mb-1.5 w-fit max-w-full truncate border-transparent bg-emerald-600 text-white hover:bg-emerald-600 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0">
@@ -502,8 +512,9 @@ export function PlanComparisonView({
     // Cabecera de columnas
     const theadCols = selectedPlansSnap.map((plan, i) => {
       const t = themes[i]
-      const logoHtml = plan.imagen
-        ? `<img src="${origin}${plan.imagen.startsWith("/") ? plan.imagen : "/" + plan.imagen}" style="height:24px;width:auto;object-fit:contain;display:block;margin-bottom:5px;" />`
+      const logoSrc = resolvePlanLogo(plan)
+      const logoHtml = logoSrc
+        ? `<img src="${origin}${logoSrc.startsWith("/") ? logoSrc : "/" + logoSrc}" style="height:36px;max-width:180px;width:auto;object-fit:contain;display:block;margin-bottom:5px;" />`
         : ""
       return `
         <th style="min-width:150px;padding:0;text-align:left;vertical-align:top;border:1px solid #e2e8f0;">

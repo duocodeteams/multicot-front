@@ -72,7 +72,7 @@ export async function downloadComparisonPDF(
     const cov = coverages[i]
     const logoHtml = logos[i]
       ? `<img src="${logos[i]}" alt="${p.empresaCotizacion}"
-              style="height:28px;max-width:110px;object-fit:contain;display:block;margin-bottom:6px;"/>`
+              style="height:36px;max-width:180px;object-fit:contain;display:block;margin-bottom:6px;"/>`
       : ""
     return `
       <td style="

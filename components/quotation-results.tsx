@@ -24,7 +24,14 @@ import {
 import type { QuotationData } from "@/components/quotation-form"
 import type { SelectedPlan } from "@/components/plan-emission-view"
 import { mapCompanyToFormalCompany } from "@/lib/services/quotes.mapper"
-import { getCompanyLogo, getCompanyInitial, normalizeCompanyKey } from "@/lib/company-logo"
+import {
+  getCompanyLogo,
+  getCompanyInitial,
+  normalizeCompanyKey,
+  resolvePlanLogo,
+  COMPANY_LOGO_CARD_CLASS,
+  COMPANY_LOGO_COMPACT_CLASS,
+} from "@/lib/company-logo"
 
 // ── Tipo Plan — solo campos reales del backend ────────────
 export type Plan = {
@@ -133,6 +140,30 @@ function resolvePromotionBadge(
   return null
 }
 
+/** % de promoción del plan; 0 si no tiene. */
+export function getPlanPromotionPct(plan: Plan): number {
+  const pct = plan.discountPct
+  if (typeof pct === "number" && Number.isFinite(pct) && pct > 0) return pct
+  return 0
+}
+
+/**
+ * Ordena planes priorizando promociones: mayor % primero, luego el resto
+ * (sin promo) por menor precio. Empates entre promos también por menor precio.
+ */
+export function sortPlansByPromotion(plans: Plan[]): Plan[] {
+  return [...plans].sort((a, b) => {
+    const promoA = getPlanPromotionPct(a)
+    const promoB = getPlanPromotionPct(b)
+    const hasPromoA = promoA > 0
+    const hasPromoB = promoB > 0
+
+    if (hasPromoA !== hasPromoB) return hasPromoA ? -1 : 1
+    if (promoA !== promoB) return promoB - promoA
+    return a.price - b.price
+  })
+}
+
 // ── Mapeo desde backend ───────────────────────────────────
 function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | null {
   if (!backendResponse) return null
@@ -201,8 +232,8 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
       } satisfies Plan
     })
 
-    plans.sort((a, b) => a.price - b.price)
-    return plans.length > 0 ? plans : null
+    const sorted = sortPlansByPromotion(plans)
+    return sorted.length > 0 ? sorted : null
   }
 
   // Formato viejo: { cotizaciones: { empresa: [...] } }
@@ -254,8 +285,8 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
       })
     })
 
-    plans.sort((a, b) => a.price - b.price)
-    return plans.length > 0 ? plans : null
+    const sorted = sortPlansByPromotion(plans)
+    return sorted.length > 0 ? sorted : null
   }
 
   return null
@@ -607,12 +638,14 @@ function CompanyBrandMark({
 
   if (logo && !logoFailed) {
     return (
-      <img
-        src={logo}
-        alt={formalName}
-        className="h-9 w-auto max-w-[140px] object-contain object-left"
-        onError={() => setLogoFailed(true)}
-      />
+      <div className="flex h-11 items-center">
+        <img
+          src={logo}
+          alt={formalName}
+          className={COMPANY_LOGO_CARD_CLASS}
+          onError={() => setLogoFailed(true)}
+        />
+      </div>
     )
   }
 
@@ -644,7 +677,7 @@ type QuotationResultsProps = {
 export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, onCompare }: QuotationResultsProps) {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [sortBy, setSortBy] = useState<"price-asc" | "price-desc" | "coverage-asc" | "coverage-desc">("price-asc")
+  const [sortBy, setSortBy] = useState<"promo" | "price-asc" | "price-desc" | "coverage-asc" | "coverage-desc">("promo")
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set())
 
   const desde = new Date(data.desde)
@@ -668,13 +701,16 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
     ? allPlans.filter((p) => selectedCompanies.has(p.companyRaw))
     : allPlans
 
-  const plans = [...filteredByCompany].sort((a, b) => {
-    if (sortBy === "price-asc") return a.price - b.price
-    if (sortBy === "price-desc") return b.price - a.price
-    if (sortBy === "coverage-asc") return parseCoverageAmount(a.maxCoverage) - parseCoverageAmount(b.maxCoverage)
-    if (sortBy === "coverage-desc") return parseCoverageAmount(b.maxCoverage) - parseCoverageAmount(a.maxCoverage)
-    return 0
-  })
+  const plans =
+    sortBy === "promo"
+      ? sortPlansByPromotion(filteredByCompany)
+      : [...filteredByCompany].sort((a, b) => {
+          if (sortBy === "price-asc") return a.price - b.price
+          if (sortBy === "price-desc") return b.price - a.price
+          if (sortBy === "coverage-asc") return parseCoverageAmount(a.maxCoverage) - parseCoverageAmount(b.maxCoverage)
+          if (sortBy === "coverage-desc") return parseCoverageAmount(b.maxCoverage) - parseCoverageAmount(a.maxCoverage)
+          return 0
+        })
 
   const totalPlans = plans.length
 
@@ -711,6 +747,7 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
             {totalPlans > 0 ? `${totalPlans} planes disponibles` : "Planes disponibles"}
           </h3>
           <p className="text-xs text-muted-foreground">
+            {sortBy === "promo" && "Ordenados por mayor promoción"}
             {sortBy === "price-asc" && "Ordenados por menor precio"}
             {sortBy === "price-desc" && "Ordenados por mayor precio"}
             {sortBy === "coverage-asc" && "Ordenados por menor cobertura"}
@@ -747,8 +784,8 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
             <Filter className="h-4 w-4 text-muted-foreground" />
             <h4 className="text-sm font-semibold text-foreground">Filtros</h4>
           </div>
-          {(sortBy !== "price-asc" || selectedCompanies.size > 0) && (
-            <Button variant="ghost" size="sm" onClick={() => { setSortBy("price-asc"); setSelectedCompanies(new Set()) }} className="h-7 gap-1.5 text-xs">
+          {(sortBy !== "promo" || selectedCompanies.size > 0) && (
+            <Button variant="ghost" size="sm" onClick={() => { setSortBy("promo"); setSelectedCompanies(new Set()) }} className="h-7 gap-1.5 text-xs">
               <X className="h-3.5 w-3.5" />
               Limpiar filtros
             </Button>
@@ -763,6 +800,7 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                 <SelectValue placeholder="Seleccionar orden" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="promo">Mayor promoción</SelectItem>
                 <SelectItem value="price-asc">Menor precio</SelectItem>
                 <SelectItem value="price-desc">Mayor precio</SelectItem>
                 <SelectItem value="coverage-asc">Menor cobertura</SelectItem>
@@ -986,14 +1024,18 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
                     </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    {(getCompanyLogo(selectedPlan.companyRaw) || selectedPlan.imagen) && (
-                      <img
-                        src={getCompanyLogo(selectedPlan.companyRaw) || selectedPlan.imagen}
-                        alt={selectedPlan.empresaCotizacion}
-                        className="h-7 w-auto max-w-[120px] object-contain opacity-90"
-                        onError={(e) => { e.currentTarget.style.display = "none" }}
-                      />
-                    )}
+                    {(() => {
+                      const logoSrc = resolvePlanLogo(selectedPlan)
+                      if (!logoSrc) return null
+                      return (
+                        <img
+                          src={logoSrc}
+                          alt={selectedPlan.empresaCotizacion}
+                          className={`${COMPANY_LOGO_COMPACT_CLASS} opacity-90`}
+                          onError={(e) => { e.currentTarget.style.display = "none" }}
+                        />
+                      )
+                    })()}
                     <button
                       type="button"
                       onClick={() => setIsDialogOpen(false)}

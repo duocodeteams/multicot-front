@@ -13,7 +13,7 @@ import axios, { AxiosInstance, AxiosError } from "axios"
  * Si no está definida, usa un valor por defecto para desarrollo local
  */
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  process.env.NEXT_PUBLIC_API_URL || "https://biantravel.tech/"
 
 /**
  * Cliente axios configurado con la URL base y headers por defecto
