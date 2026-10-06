@@ -4,6 +4,9 @@ import { useState } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
+import { PromotionsBanner } from "@/components/promotions-banner"
+import { PromotionsModal } from "@/components/promotions-modal"
+import { PromotionsView } from "@/components/promotions-view"
 import { QuotationForm, type QuotationData } from "@/components/quotation-form"
 import { QuotationResults, QuotationResultsSkeleton } from "@/components/quotation-results"
 import { SettingsView } from "@/components/settings-view"
@@ -21,7 +24,7 @@ import { createQuote } from "@/lib/services"
 import { mapQuotationDataToApi } from "@/lib/services/quotes.mapper"
 import { toast } from "sonner"
 
-type ViewState = "form" | "loading" | "results" | "emission" | "comparison" | "settings" | "admin-users-agencies" | "admin-create-agency" | "admin-create-user" | "admin-management" | "admin-plans"
+type ViewState = "form" | "loading" | "results" | "emission" | "comparison" | "promotions" | "settings" | "admin-users-agencies" | "admin-create-agency" | "admin-create-user" | "admin-management" | "admin-plans"
 
 export function DashboardView() {
   const { loginResponse } = useAuth()
@@ -91,6 +94,10 @@ export function DashboardView() {
     setView("form")
   }
 
+  const handleNavigateToPromotions = () => {
+    setView("promotions")
+  }
+
   const handleNavigateToSettings = () => {
     setView("settings")
   }
@@ -119,6 +126,7 @@ export function DashboardView() {
     <SidebarProvider>
       <AppSidebar 
         onNavigateToForm={handleNavigateToForm}
+        onNavigateToPromotions={handleNavigateToPromotions}
         onNavigateToSettings={handleNavigateToSettings}
         onNavigateToAdminUsersAgencies={handleNavigateToAdminUsersAgencies}
         onNavigateToAdminCreateAgency={handleNavigateToAdminCreateAgency}
@@ -129,9 +137,13 @@ export function DashboardView() {
       />
       <SidebarInset>
         <DashboardHeader currentView={view} />
+        <PromotionsModal />
         <div className="flex-1 overflow-auto p-4 md:p-6 w-full min-w-0">
           {view === "form" && (
-            <QuotationForm onSubmit={handleSubmit} isLoading={isLoading} />
+            <>
+              <PromotionsBanner />
+              <QuotationForm onSubmit={handleSubmit} isLoading={isLoading} />
+            </>
           )}
           {view === "loading" && <QuotationResultsSkeleton />}
           {view === "results" && quotationData && (
@@ -159,6 +171,7 @@ export function DashboardView() {
               onBackToForm={handleBack}
             />
           )}
+          {view === "promotions" && <PromotionsView />}
           {view === "settings" && <SettingsView />}
           {view === "admin-users-agencies" && <AdminUsersAgencies />}
           {view === "admin-create-agency" && <AdminCreateAgency />}

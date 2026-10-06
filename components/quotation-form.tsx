@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { CalendarIcon, Plus, Trash2, ArrowRight, Plane, Users, Globe } from "lucide-react"
+import { CalendarIcon, Plus, Trash2, ArrowRight, Plane, Users, Globe, MessageCircle } from "lucide-react"
 import { format, startOfDay, isBefore, differenceInDays, addDays } from "date-fns"
 import { es } from "date-fns/locale"
 import type { DateRange } from "react-day-picker"
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { getSupportWhatsAppUrl } from "@/lib/whatsapp"
 
 const destinations = [
   { value: "1001", label: "Europa" },
@@ -455,9 +456,22 @@ const isMobile = useIsMobile()
 
           {/* ── Submit ── */}
           <div className="flex flex-col items-end gap-2 pt-3 border-t border-border/60 md:flex-row md:items-center md:justify-between">
-            <p className="text-xs text-muted-foreground">
-              Los precios se muestran en dólares (USD).
-            </p>
+            <a
+              href={getSupportWhatsAppUrl(
+                "Hola, necesito una cotización grupal o planes especiales."
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex max-w-full items-start gap-1.5 text-xs text-muted-foreground transition-colors hover:text-accent sm:items-center"
+            >
+              <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent sm:mt-0" />
+              <span>
+                Hacé click acá si necesitás una{" "}
+                <span className="font-medium text-accent underline underline-offset-2">
+                  cotización grupal o planes especiales
+                </span>
+              </span>
+            </a>
             <Button type="submit" size="lg" disabled={isLoading} className="w-full md:w-auto">
               {isLoading ? (
                 <>

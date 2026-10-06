@@ -171,10 +171,23 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
   // Formato nuevo: { plans: [...] }
   if (backendResponse.plans && Array.isArray(backendResponse.plans)) {
     const plans: Plan[] = backendResponse.plans.map((planData: any) => {
-      const priceUsd = parseOptionalRate(planData.final_rate_usd)
-      const priceArs = parseOptionalRate(planData.final_rate)
-      const basePriceUsd = parseOptionalRate(planData.base_rate_usd)
-      const basePriceArs = parseOptionalRate(planData.base_rate)
+      const rawExchange = parseOptionalRate(planData.exchange_rate)
+      let priceUsd = parseOptionalRate(planData.final_rate_usd)
+      let priceArs = parseOptionalRate(planData.final_rate)
+      let basePriceUsd = parseOptionalRate(planData.base_rate_usd)
+      let basePriceArs = parseOptionalRate(planData.base_rate)
+      let exchange_rate = parseExchangeRate(planData.exchange_rate)
+
+      // TC = 1: la compañía no informa tipo de cambio; final_rate viene en USD
+      // (ej. New Travel). No mostrar ese valor como ARS.
+      if (rawExchange === 1) {
+        priceUsd = priceUsd ?? priceArs
+        priceArs = undefined
+        basePriceUsd = basePriceUsd ?? basePriceArs
+        basePriceArs = undefined
+        exchange_rate = 2 // flag UI: solo USD
+      }
+
       const discountPct = parseOptionalRate(planData.discount_pct)
       const promotionName =
         typeof planData.promotion_name === "string" && planData.promotion_name.trim()
@@ -228,7 +241,7 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
         empresaCotizacion: mapCompanyToFormalCompany(planData.company ?? "Compañía"),
         companyRaw: planData.company ?? "Compañía",
         imagen: planData.imagen,
-        exchange_rate: parseExchangeRate(planData.exchange_rate),
+        exchange_rate,
       } satisfies Plan
     })
 

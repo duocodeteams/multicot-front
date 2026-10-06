@@ -21,6 +21,7 @@ type ViewState =
   | "form"
   | "loading"
   | "results"
+  | "promotions"
   | "settings"
   | "admin-users-agencies"
   | "admin-create-agency"
@@ -33,6 +34,7 @@ const VIEW_TITLES: Record<string, { label: string; section?: string }> = {
   loading: { label: "Procesando...", section: "Cotizador" },
   results: { label: "Resultados", section: "Cotizador" },
   emission: { label: "Emitir Plan", section: "Cotizador" },
+  promotions: { label: "Promociones" },
   settings: { label: "Configuración" },
   "admin-users-agencies": { label: "Usuarios y Agencias", section: "Administración" },
   "admin-create-agency": { label: "Crear Agencia", section: "Administración" },
@@ -103,7 +105,7 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
           <img
             src="/portal/biantlogosf.png"
             alt="Biant"
-            className="h-10 w-10 object-cover shrink-0"
+            className="h-10 w-auto max-w-[160px] object-contain"
           />
           <div className="w-px h-8 bg-gray-200 shrink-0" />
           <img

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { LayoutDashboard, Settings, HelpCircle, Users, Building2, UserPlus, Shield, LogOut, Layers } from "lucide-react"
+import { LayoutDashboard, Settings, HelpCircle, Users, Building2, UserPlus, Shield, LogOut, Layers, Megaphone } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -27,10 +27,12 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
+import { getSupportWhatsAppUrl } from "@/lib/whatsapp"
 import { toast } from "sonner"
 
 type AppSidebarProps = {
   onNavigateToForm?: () => void
+  onNavigateToPromotions?: () => void
   onNavigateToSettings?: () => void
   onNavigateToAdminUsersAgencies?: () => void
   onNavigateToAdminCreateAgency?: () => void
@@ -42,6 +44,7 @@ type AppSidebarProps = {
 
 export function AppSidebar({
   onNavigateToForm,
+  onNavigateToPromotions,
   onNavigateToSettings,
   onNavigateToAdminUsersAgencies,
   onNavigateToAdminCreateAgency,
@@ -55,7 +58,6 @@ export function AppSidebar({
 
   const normalizedRole = String(user?.role ?? "").toLowerCase()
   const isAdmin = normalizedRole === "admin" || normalizedRole === "1"
-  const supportPhone = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? ""
 
   const getInitials = () => {
     if (user?.nombre) {
@@ -81,14 +83,11 @@ export function AppSidebar({
   }
 
   const handleOpenSupportWhatsApp = () => {
-    const supportMessage = "Hola, necesito soporte con la plataforma."
-    const cleanPhone = supportPhone.replace(/\D/g, "")
-    const text = encodeURIComponent(supportMessage)
-    const url = cleanPhone
-      ? `https://wa.me/${cleanPhone}?text=${text}`
-      : `https://wa.me/?text=${text}`
-
-    window.open(url, "_blank", "noopener,noreferrer")
+    window.open(
+      getSupportWhatsAppUrl("Hola, necesito soporte con la plataforma."),
+      "_blank",
+      "noopener,noreferrer"
+    )
     setIsSupportModalOpen(false)
   }
 
@@ -124,6 +123,16 @@ export function AppSidebar({
                 >
                   <LayoutDashboard className="h-4 w-4" />
                   <span>Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentView === "promotions"}
+                  tooltip="Promociones"
+                  onClick={onNavigateToPromotions}
+                >
+                  <Megaphone className="h-4 w-4" />
+                  <span>Promociones</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

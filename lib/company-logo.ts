@@ -17,7 +17,7 @@ export function normalizeCompanyKey(company: string): string {
 
 // Prefijo /portal por el basePath de Next (next.config.mjs)
 const LOGO_RULES: ReadonlyArray<readonly [RegExp, string]> = [
-  [/newtravel/, "/portal/newtravellogo.png"],
+  [/newtravel/, "/portal/newtravel.png"],
   [/terrawind/, "/portal/terrawindlogo.png"],
   [/universal/, "/portal/universallogo.png"],
   [/cardinal/, "/portal/cardinallogo.png"],
