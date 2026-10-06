@@ -321,3 +321,58 @@ export interface ListPlansResponse {
   limit: number
   offset: number
 }
+
+// ==================== PROMOCIONES (CATÁLOGO INFORMATIVO) ====================
+
+/** Vigencia relativa a la fecha de Argentina. */
+export type PromotionStatus = "current" | "upcoming" | "expired" | "all"
+
+export interface PromotionPlan {
+  id: number
+  name: string
+  external_plan_id: string
+  active: boolean
+}
+
+export interface PromotionResponse {
+  id: number
+  company_id: number
+  company_slug: string
+  company_name: string
+  company_active: boolean
+  description: string
+  /** Fecha inclusiva (YYYY-MM-DD, Argentina). */
+  starts_on: string
+  /** Fecha inclusiva (YYYY-MM-DD, Argentina). */
+  ends_on: string
+  plans: PromotionPlan[]
+}
+
+export interface ListPromotionsParams {
+  /** Default API: current */
+  status?: PromotionStatus
+  company_id?: number
+  /** true incluye compañías/planes inactivos. Vista usuarios: false. */
+  include_inactive?: boolean
+}
+
+export interface ListPromotionsResponse {
+  items: PromotionResponse[]
+  total: number
+}
+
+export interface CreatePromotionRequest {
+  company_id: number
+  description: string
+  starts_on: string
+  ends_on: string
+  plan_ids: number[]
+}
+
+export interface UpdatePromotionRequest {
+  description?: string
+  starts_on?: string
+  ends_on?: string
+  /** Reemplaza la lista completa (no es un agregado). */
+  plan_ids?: number[]
+}

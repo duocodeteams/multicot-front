@@ -39,6 +39,7 @@ type AppSidebarProps = {
   onNavigateToAdminCreateUser?: () => void
   onNavigateToAdminManagement?: () => void
   onNavigateToAdminPlans?: () => void
+  onNavigateToAdminPromotions?: () => void
   currentView?: string
 }
 
@@ -51,6 +52,7 @@ export function AppSidebar({
   onNavigateToAdminCreateUser,
   onNavigateToAdminManagement,
   onNavigateToAdminPlans,
+  onNavigateToAdminPromotions,
   currentView = "form"
 }: AppSidebarProps) {
   const { user, logout } = useAuth()
@@ -197,6 +199,16 @@ export function AppSidebar({
                     >
                       <Layers className="h-4 w-4" />
                       <span>Gestión de planes</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={currentView === "admin-promotions"}
+                      tooltip="Gestión de promociones"
+                      onClick={onNavigateToAdminPromotions}
+                    >
+                      <Megaphone className="h-4 w-4" />
+                      <span>Gestión de promociones</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>

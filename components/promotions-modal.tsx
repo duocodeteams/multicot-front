@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Megaphone, Percent, Plane, Sparkles, X } from "lucide-react"
+import { CalendarRange, Megaphone, X } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -10,30 +10,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   markPromotionsModalSeen,
   shouldShowPromotionsModal,
 } from "@/lib/promotions-modal"
+import {
+  formatPromotionDate,
+  listPromotions,
+} from "@/lib/services/promotions.service"
+import type { PromotionResponse } from "@/lib/services/types"
 
 const OPEN_DELAY_MS = 1200
-
-const PLACEHOLDER_PROMOS = [
-  {
-    icon: Percent,
-    title: "Promo del mes",
-    description: "Aquí vas a ver descuentos y beneficios destacados para tu agencia.",
-  },
-  {
-    icon: Plane,
-    title: "Destinos en oferta",
-    description: "Próximamente: campañas especiales por región y tipo de viaje.",
-  },
-  {
-    icon: Sparkles,
-    title: "Beneficios exclusivos",
-    description: "Novedades y condiciones preferenciales, actualizadas cada mes.",
-  },
-] as const
 
 function DiagonalPattern() {
   return (
@@ -61,23 +49,43 @@ function AbstractSquares() {
       <div className="absolute -left-6 -top-8 h-28 w-28 rotate-12 border border-white/20 bg-white/5" />
       <div className="absolute right-4 top-10 h-16 w-16 -rotate-6 border border-accent/40 bg-accent/10" />
       <div className="absolute -right-8 bottom-8 h-24 w-24 rotate-[20deg] border border-white/15 bg-white/[0.04]" />
-      <div className="absolute bottom-16 left-10 h-12 w-12 rotate-45 border border-white/25 bg-white/[0.06]" />
-      <div className="absolute left-1/2 top-1/3 h-20 w-20 -translate-x-1/2 rotate-[8deg] border border-white/10 bg-primary/20" />
     </div>
   )
 }
 
-export function PromotionsModal() {
+type PromotionsModalProps = {
+  onNavigateToPromotions?: () => void
+}
+
+export function PromotionsModal({ onNavigateToPromotions }: PromotionsModalProps) {
   const [open, setOpen] = useState(false)
+  const [promos, setPromos] = useState<PromotionResponse[]>([])
 
   useEffect(() => {
     if (!shouldShowPromotionsModal()) return
 
-    const timer = window.setTimeout(() => {
-      setOpen(true)
-    }, OPEN_DELAY_MS)
+    let cancelled = false
+    let timer: number | undefined
 
-    return () => window.clearTimeout(timer)
+    void (async () => {
+      try {
+        const res = await listPromotions({ status: "current", include_inactive: false })
+        if (cancelled) return
+        const items = res.items ?? []
+        if (items.length === 0) return
+        setPromos(items)
+        timer = window.setTimeout(() => {
+          if (!cancelled) setOpen(true)
+        }, OPEN_DELAY_MS)
+      } catch {
+        // Sin promos o error de red: no molestar al usuario
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
   }, [])
 
   const handleOpenChange = (next: boolean) => {
@@ -86,6 +94,8 @@ export function PromotionsModal() {
       markPromotionsModalSeen()
     }
   }
+
+  const preview = promos.slice(0, 4)
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -114,7 +124,7 @@ export function PromotionsModal() {
                   <Megaphone className="h-4 w-4 text-accent" />
                 </div>
                 <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent sm:text-xs">
-                  Próximamente
+                  Vigentes
                 </span>
               </div>
               <DialogTitle className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
@@ -124,24 +134,49 @@ export function PromotionsModal() {
                 id="promotions-modal-description"
                 className="text-sm leading-relaxed text-white/70"
               >
-                Próximamente visualizarás aquí las promociones del mes. Este aviso
-                vuelve a aparecer cada 7 días.
+                {promos.length} promoción{promos.length === 1 ? "" : "es"} vigente
+                {promos.length === 1 ? "" : "s"} para tu agencia.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-5 grid gap-3 sm:mt-6 sm:grid-cols-3">
-              {PLACEHOLDER_PROMOS.map(({ icon: Icon, title, description }) => (
+            <div className="mt-5 max-h-[40vh] space-y-3 overflow-y-auto sm:mt-6">
+              {preview.map((promo) => (
                 <div
-                  key={title}
-                  className="rounded-xl border border-white/15 bg-white/[0.07] p-3.5 backdrop-blur-[2px] sm:p-4"
+                  key={promo.id}
+                  className="rounded-xl border border-white/15 bg-white/[0.07] p-3.5 backdrop-blur-[2px]"
                 >
-                  <div className="mb-2.5 flex h-8 w-8 items-center justify-center rounded-md bg-accent/15">
-                    <Icon className="h-4 w-4 text-accent" />
-                  </div>
-                  <p className="text-sm font-semibold text-white">{title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-white/65">
-                    {description}
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
+                    {promo.company_name}
                   </p>
+                  <p className="mt-1 text-sm font-medium leading-snug text-white">
+                    {promo.description}
+                  </p>
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-white/60">
+                    <CalendarRange className="h-3.5 w-3.5" />
+                    {formatPromotionDate(promo.starts_on)} —{" "}
+                    {formatPromotionDate(promo.ends_on)}
+                  </p>
+                  {promo.plans.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {promo.plans.slice(0, 4).map((plan) => (
+                        <Badge
+                          key={plan.id}
+                          variant="secondary"
+                          className="bg-white/15 text-[10px] font-normal text-white hover:bg-white/20"
+                        >
+                          {plan.name}
+                        </Badge>
+                      ))}
+                      {promo.plans.length > 4 && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-white/10 text-[10px] font-normal text-white/70"
+                        >
+                          +{promo.plans.length - 4}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -149,12 +184,25 @@ export function PromotionsModal() {
             <div className="mt-5 flex flex-col-reverse gap-2 sm:mt-6 sm:flex-row sm:justify-end">
               <Button
                 type="button"
-                variant="secondary"
-                className="bg-white text-primary hover:bg-white/90"
+                variant="ghost"
+                className="text-white/80 hover:bg-white/10 hover:text-white"
                 onClick={() => handleOpenChange(false)}
               >
-                Ver más tarde
+                Cerrar
               </Button>
+              {onNavigateToPromotions && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="bg-white text-primary hover:bg-white/90"
+                  onClick={() => {
+                    handleOpenChange(false)
+                    onNavigateToPromotions()
+                  }}
+                >
+                  Ver todas
+                </Button>
+              )}
             </div>
           </div>
         </div>
