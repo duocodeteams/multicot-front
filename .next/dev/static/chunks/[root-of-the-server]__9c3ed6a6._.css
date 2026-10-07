@@ -1357,6 +1357,10 @@ body {
   max-width: 320px;
 }
 
+.max-w-\[34px\] {
+  max-width: 34px;
+}
+
 .max-w-\[420px\] {
   max-width: 420px;
 }
@@ -3173,6 +3177,10 @@ body {
 
 .ring-white\/10 {
   --tw-ring-color: #ffffff1a;
+}
+
+.ring-white\/20 {
+  --tw-ring-color: #fff3;
 }
 
 .ring-offset-background {

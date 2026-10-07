@@ -17,6 +17,10 @@ import {
 } from "@/lib/promotions-modal"
 import { useAuth } from "@/lib/auth-context"
 import {
+  getCompanyInitial,
+  getCompanyLogo,
+} from "@/lib/company-logo"
+import {
   formatPromotionDate,
   listPromotions,
 } from "@/lib/services/promotions.service"
@@ -142,45 +146,67 @@ export function PromotionsModal({ onNavigateToPromotions }: PromotionsModalProps
             </DialogHeader>
 
             <div className="mt-5 max-h-[40vh] space-y-3 overflow-y-auto sm:mt-6">
-              {preview.map((promo) => (
-                <div
-                  key={promo.id}
-                  className="rounded-xl border border-white/15 bg-white/[0.07] p-3.5 backdrop-blur-[2px]"
-                >
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
-                    {promo.company_name}
-                  </p>
-                  <p className="mt-1 text-sm font-medium leading-snug text-white">
-                    {promo.description}
-                  </p>
-                  <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-white/60">
-                    <CalendarRange className="h-3.5 w-3.5" />
-                    {formatPromotionDate(promo.starts_on)} —{" "}
-                    {formatPromotionDate(promo.ends_on)}
-                  </p>
-                  {promo.plans.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {promo.plans.slice(0, 4).map((plan) => (
-                        <Badge
-                          key={plan.id}
-                          variant="secondary"
-                          className="bg-white/15 text-[10px] font-normal text-white hover:bg-white/20"
-                        >
-                          {plan.name}
-                        </Badge>
-                      ))}
-                      {promo.plans.length > 4 && (
-                        <Badge
-                          variant="secondary"
-                          className="bg-white/10 text-[10px] font-normal text-white/70"
-                        >
-                          +{promo.plans.length - 4}
-                        </Badge>
-                      )}
+              {preview.map((promo) => {
+                const logo =
+                  getCompanyLogo(promo.company_name) ??
+                  getCompanyLogo(promo.company_slug)
+
+                return (
+                  <div
+                    key={promo.id}
+                    className="rounded-xl border border-white/15 bg-white/[0.07] p-3.5 backdrop-blur-[2px]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-white/20">
+                        {logo ? (
+                          <img
+                            src={logo}
+                            alt={promo.company_name}
+                            className="h-7 w-auto max-w-[34px] object-contain"
+                            draggable={false}
+                          />
+                        ) : (
+                          <span className="text-xs font-bold text-primary">
+                            {getCompanyInitial(promo.company_name)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-wide text-accent">
+                        {promo.company_name}
+                      </p>
                     </div>
-                  )}
-                </div>
-              ))}
+                    <p className="mt-2 text-sm font-medium leading-snug text-white">
+                      {promo.description}
+                    </p>
+                    <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-white/60">
+                      <CalendarRange className="h-3.5 w-3.5" />
+                      {formatPromotionDate(promo.starts_on)} —{" "}
+                      {formatPromotionDate(promo.ends_on)}
+                    </p>
+                    {promo.plans.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {promo.plans.slice(0, 4).map((plan) => (
+                          <Badge
+                            key={plan.id}
+                            variant="secondary"
+                            className="bg-white/15 text-[10px] font-normal text-white hover:bg-white/20"
+                          >
+                            {plan.name}
+                          </Badge>
+                        ))}
+                        {promo.plans.length > 4 && (
+                          <Badge
+                            variant="secondary"
+                            className="bg-white/10 text-[10px] font-normal text-white/70"
+                          >
+                            +{promo.plans.length - 4}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
 
             <div className="mt-5 flex flex-col-reverse gap-2 sm:mt-6 sm:flex-row sm:justify-end">
