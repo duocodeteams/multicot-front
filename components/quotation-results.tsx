@@ -59,7 +59,7 @@ export type Plan = {
   exceptions: string[]
   companyRaw: string
   imagen?: string
-  /** TC ARS/USD. 1 = sin TC; 2 = mostrar solo USD; >2 = TC real. */
+  /** 1 = solo ARS; 2 = solo USD; >2 = TC real con ambos precios. */
   exchange_rate?: number
 }
 
@@ -92,14 +92,12 @@ export function parseOptionalRate(
   return Number.isFinite(n) ? n : undefined
 }
 
-/** TC usable. 1 o menos = sin TC. 2 se conserva como flag “solo USD”. */
+/** 1 = solo ARS; 2 = solo USD; >2 = TC real. Valores < 1 se descartan. */
 export function parseExchangeRate(
   value: string | number | null | undefined
 ): number | undefined {
   const n = parseOptionalRate(value)
   if (n === undefined || n < 1) return undefined
-  // 1 = sin TC → se descarta
-  if (n === 1) return undefined
   return n
 }
 
@@ -178,14 +176,19 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
       let basePriceArs = parseOptionalRate(planData.base_rate)
       let exchange_rate = parseExchangeRate(planData.exchange_rate)
 
-      // TC = 1: la compañía no informa tipo de cambio; final_rate viene en USD
-      // (ej. New Travel). No mostrar ese valor como ARS.
+      // 1 = solo ARS; 2 = solo USD; >2 = ambos con TC real.
       if (rawExchange === 1) {
+        priceArs = priceArs ?? priceUsd
+        priceUsd = undefined
+        basePriceArs = basePriceArs ?? basePriceUsd
+        basePriceUsd = undefined
+        exchange_rate = 1
+      } else if (rawExchange === 2) {
         priceUsd = priceUsd ?? priceArs
         priceArs = undefined
         basePriceUsd = basePriceUsd ?? basePriceArs
         basePriceArs = undefined
-        exchange_rate = 2 // flag UI: solo USD
+        exchange_rate = 2
       }
 
       const discountPct = parseOptionalRate(planData.discount_pct)
@@ -553,7 +556,8 @@ function PlanPriceBlock({
   size?: "card" | "detail"
 }) {
   const usdOnly = plan.exchange_rate === 2
-  const hasUsd = plan.priceUsd !== undefined
+  const arsOnly = plan.exchange_rate === 1
+  const hasUsd = !arsOnly && plan.priceUsd !== undefined
   const hasArs = !usdOnly && plan.priceArs !== undefined
   const showTc =
     hasUsd && hasArs && plan.exchange_rate !== undefined && plan.exchange_rate > 2
@@ -567,6 +571,7 @@ function PlanPriceBlock({
   const hasPromo = Boolean(plan.badge)
   const showBaseUsd =
     hasPromo &&
+    !arsOnly &&
     plan.basePriceUsd !== undefined &&
     plan.priceUsd !== undefined &&
     plan.basePriceUsd > plan.priceUsd
