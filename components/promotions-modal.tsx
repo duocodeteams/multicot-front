@@ -15,6 +15,7 @@ import {
   markPromotionsModalSeen,
   shouldShowPromotionsModal,
 } from "@/lib/promotions-modal"
+import { useAuth } from "@/lib/auth-context"
 import {
   formatPromotionDate,
   listPromotions,
@@ -58,11 +59,12 @@ type PromotionsModalProps = {
 }
 
 export function PromotionsModal({ onNavigateToPromotions }: PromotionsModalProps) {
+  const { token } = useAuth()
   const [open, setOpen] = useState(false)
   const [promos, setPromos] = useState<PromotionResponse[]>([])
 
   useEffect(() => {
-    if (!shouldShowPromotionsModal()) return
+    if (!shouldShowPromotionsModal(token)) return
 
     let cancelled = false
     let timer: number | undefined
@@ -86,12 +88,12 @@ export function PromotionsModal({ onNavigateToPromotions }: PromotionsModalProps
       cancelled = true
       if (timer !== undefined) window.clearTimeout(timer)
     }
-  }, [])
+  }, [token])
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next)
     if (!next) {
-      markPromotionsModalSeen()
+      markPromotionsModalSeen(token)
     }
   }
 

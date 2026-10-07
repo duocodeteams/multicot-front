@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { login as loginService } from "./services"
+import { clearPromotionsModalSeen } from "./promotions-modal"
 
 type User = {
   id: number
@@ -148,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(AUTH_TOKEN_KEY)
       localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY)
       localStorage.removeItem(AUTH_USER_KEY)
+      clearPromotionsModalSeen()
     }
   }, [])
 
