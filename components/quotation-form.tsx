@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import { CalendarIcon, Plus, Trash2, ArrowRight, Plane, Users, Globe, MessageCircle } from "lucide-react"
 import { format, startOfDay, isBefore, differenceInDays, addDays } from "date-fns"
 import { es } from "date-fns/locale"
@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import { getSupportWhatsAppUrl } from "@/lib/whatsapp"
 
@@ -59,32 +60,33 @@ function SectionNumber({ n }: { n: number }) {
 }
 
 export function QuotationForm({ onSubmit, isLoading }: QuotationFormProps) {
+  const isMobile = useIsMobile()
   const [destino, setDestino] = useState("")
   const [tipoViaje, setTipoViaje] = useState("")
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [tempRange, setTempRange] = useState<DateRange | undefined>()
   const [calendarOpen, setCalendarOpen] = useState(false)
-const [passengers, setPassengers] = useState<string[]>(["30"])
+  const [passengers, setPassengers] = useState<string[]>(["30"])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const isMultiTrip = tipoViaje.startsWith("MULTI_TRIP")
 
-const addPassenger = () => {
-  if (passengers.length < 10) {
-    setPassengers([...passengers, "30"])
+  const addPassenger = () => {
+    if (passengers.length < 10) {
+      setPassengers([...passengers, "30"])
+    }
   }
-}
 
-const removePassenger = (index: number) => {
-  if (passengers.length > 1) {
-    setPassengers(passengers.filter((_, i) => i !== index))
+  const removePassenger = (index: number) => {
+    if (passengers.length > 1) {
+      setPassengers(passengers.filter((_, i) => i !== index))
+    }
   }
-}
 
-const updatePassengerAge = (index: number, age: string) => {
-  const updated = [...passengers]
-  updated[index] = age
-  setPassengers(updated)
-}
+  const updatePassengerAge = (index: number, age: string) => {
+    const updated = [...passengers]
+    updated[index] = age
+    setPassengers(updated)
+  }
 
   const formatDate = (date: Date): string => {
     const year = date.getFullYear()
@@ -184,47 +186,27 @@ const updatePassengerAge = (index: number, age: string) => {
   }
 
 
-function useIsMobile(): boolean {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 768px)")
-    const listener = () => setIsMobile(media.matches)
-
-    listener()
-    media.addEventListener("change", listener)
-
-    return () => media.removeEventListener("change", listener)
-  }, [])
-
-  return isMobile
-}
-
-// 👇 ACÁ SÍ lo usás
-const isMobile = useIsMobile()
-
   return (
-    <Card className="border-border overflow-hidden">
+    <Card className="border-border overflow-hidden w-full min-w-0 max-w-full">
       {/* Barra de acento superior */}
       <div className="h-1 bg-gradient-to-r from-primary via-primary/70 to-accent" />
 
       <CardHeader className="pb-2 pt-4 px-4 sm:px-5">
-        <div className="flex items-start gap-2.5 sm:items-center">
+        <div className="flex items-start gap-2.5 sm:items-center min-w-0">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 shrink-0">
             <Plane className="h-4 w-4 text-primary" />
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             <CardTitle className="text-base text-foreground">Nueva Cotización</CardTitle>
-            <CardDescription className="text-xs leading-tight">
-              Complete los datos del viaje para obtener las mejores opciones de asistencia.
+            <CardDescription className="text-xs leading-snug break-words">
+              Completá los datos del viaje para cotizar asistencia.
             </CardDescription>
           </div>
         </div>
       </CardHeader>
 
-
-      <CardContent className="px-4 sm:px-5 pb-5">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <CardContent className="px-4 sm:px-5 pb-5 min-w-0">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 min-w-0">
 
           {/* ── Sección 1: Destino ── */}
           <div className="flex flex-col gap-2.5">
@@ -292,8 +274,8 @@ const isMobile = useIsMobile()
           </div>
 
           {/* ── Sección 2: Fechas ── */}
-          <div className="flex flex-col gap-2.5">
-            <div className="flex items-center gap-1.5">
+          <div className="flex flex-col gap-2.5 min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
               <SectionNumber n={2} />
               <h3 className="text-xs font-semibold text-foreground flex items-center gap-1">
                 <CalendarIcon className="h-3 w-3 text-muted-foreground" />
@@ -311,16 +293,16 @@ const isMobile = useIsMobile()
               variant="outline"
               onClick={() => handleOpenCalendar(true)}
               className={cn(
-                "w-full justify-start bg-background text-left font-normal transition-colors hover:bg-accent hover:text-accent-foreground hover:border-input/80",
+                "w-full justify-start bg-background text-left font-normal transition-colors hover:bg-accent hover:text-accent-foreground hover:border-input/80 min-w-0 h-auto py-2.5 whitespace-normal",
                 !dateRange?.from && "text-muted-foreground",
                 errors.dates && "border-destructive"
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
               {dateRange?.from && dateRange?.to ? (
-                <span>
+                <span className="min-w-0 break-words">
                   {format(dateRange.from, "d MMM yyyy", { locale: es })}
-                  <span className="mx-2 text-muted-foreground">→</span>
+                  <span className="mx-1.5 text-muted-foreground">→</span>
                   {format(dateRange.to, "d MMM yyyy", { locale: es })}
                 </span>
               ) : (
@@ -330,8 +312,8 @@ const isMobile = useIsMobile()
 
             {/* Modal del calendario */}
             <Dialog open={calendarOpen} onOpenChange={(open) => handleOpenCalendar(!!open)}>
-              <DialogContent className="w-auto max-w-fit gap-0 pt-8 px-0 pb-0">
-                <div className="p-3">
+              <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[min(100vw-1.5rem,42rem)] gap-0 overflow-x-hidden p-0 pt-8 sm:w-auto sm:max-w-fit">
+                <div className="overflow-x-auto p-2 sm:p-3">
                   <Calendar
                     mode="range"
                     numberOfMonths={isMobile ? 1 : 2}
@@ -343,28 +325,38 @@ const isMobile = useIsMobile()
                       return isBefore(compareDate, today)
                     }}
                     initialFocus
-                    className="p-0"
+                    className="p-0 mx-auto"
                   />
                 </div>
-                <div className="border-t px-5 py-3 text-sm text-center text-foreground bg-muted/30">
-                  <span className="font-bold tracking-wide">DESDE:</span>{" "}
-                  <span className="font-semibold">
-                    {tempRange?.from ? format(tempRange.from, "d MMM yyyy", { locale: es }) : "—"}
-                  </span>
-                  <ArrowRight className="inline mx-3 h-4 w-4 text-muted-foreground" />
-                  <span className="font-bold tracking-wide">HASTA:</span>{" "}
-                  <span className="font-semibold">
-                    {tempRange?.to ? format(tempRange.to, "d MMM yyyy", { locale: es }) : "—"}
-                  </span>
+                <div className="border-t px-3 py-3 text-xs sm:text-sm text-center text-foreground bg-muted/30 sm:px-5">
+                  <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+                    <span>
+                      <span className="font-bold tracking-wide">DESDE:</span>{" "}
+                      <span className="font-semibold">
+                        {tempRange?.from
+                          ? format(tempRange.from, "d MMM yyyy", { locale: es })
+                          : "—"}
+                      </span>
+                    </span>
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span>
+                      <span className="font-bold tracking-wide">HASTA:</span>{" "}
+                      <span className="font-semibold">
+                        {tempRange?.to
+                          ? format(tempRange.to, "d MMM yyyy", { locale: es })
+                          : "—"}
+                      </span>
+                    </span>
+                  </div>
                 </div>
-                <div className="border-t px-5 py-3 flex items-center justify-between">
-                  <span className="text-sm text-foreground">
+                <div className="border-t px-3 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                  <span className="text-sm text-foreground text-center sm:text-left">
                     Total:{" "}
                     <strong>
                       {totalDays != null ? `${totalDays} día${totalDays !== 1 ? "s" : ""}.` : "—"}
                     </strong>
                   </span>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-center gap-3">
                     <button
                       type="button"
                       onClick={handleClear}
@@ -392,14 +384,14 @@ const isMobile = useIsMobile()
           </div>
 
           {/* ── Sección 3: Pasajeros ── */}
-          <div className="flex flex-col gap-2.5">
-            <div className="flex items-center gap-1.5">
+          <div className="flex flex-col gap-2.5 min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5">
               <SectionNumber n={3} />
               <h3 className="text-xs font-semibold text-foreground flex items-center gap-1">
                 <Users className="h-3 w-3 text-muted-foreground" />
                 Pasajeros
               </h3>
-              <span className="ml-auto text-xs text-muted-foreground">
+              <span className="text-xs text-muted-foreground sm:ml-auto">
                 {passengers.length} / 10
               </span>
               <Button
@@ -408,27 +400,35 @@ const isMobile = useIsMobile()
                 size="sm"
                 onClick={addPassenger}
                 disabled={passengers.length >= 10}
-                className="h-7 px-2.5 text-xs"
+                className="h-7 px-2.5 text-xs ml-auto sm:ml-0"
               >
                 <Plus className="mr-1 h-3 w-3" />
                 Agregar
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+            <div
+              className={cn(
+                "grid gap-2 min-w-0",
+                passengers.length === 1
+                  ? "grid-cols-1 max-w-xs"
+                  : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+              )}
+            >
               {passengers.map((age, index) => (
-                <div key={index} className="flex flex-col gap-1">
+                <div key={index} className="flex flex-col gap-1 min-w-0">
                   <Label className="text-[10px] text-muted-foreground font-medium">
-                    Pasajero {index + 1}
+                    Pasajero {index + 1} — edad
                   </Label>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 min-w-0">
                     <Input
                       type="number"
+                      inputMode="numeric"
                       min={0}
                       max={99}
                       value={age}
                       onChange={(e) => updatePassengerAge(index, e.target.value)}
                       className={cn(
-                        "bg-background cursor-text",
+                        "bg-background cursor-text min-w-0 w-full",
                         errors.passengers && "border-destructive focus:border-destructive focus:ring-destructive"
                       )}
                       aria-label={`Edad pasajero ${index + 1}`}
@@ -455,28 +455,31 @@ const isMobile = useIsMobile()
           </div>
 
           {/* ── Submit ── */}
-          <div className="flex flex-col items-end gap-2 pt-3 border-t border-border/60 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-3 pt-3 border-t border-border/60 sm:flex-row sm:items-center sm:justify-between">
             <a
               href={getSupportWhatsAppUrl(
                 "Hola, necesito una cotización grupal o planes especiales."
               )}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex max-w-full items-start gap-1.5 text-xs text-muted-foreground transition-colors hover:text-accent sm:items-center"
+              className="inline-flex max-w-full min-w-0 items-start gap-1.5 text-xs text-muted-foreground transition-colors hover:text-accent sm:items-center order-2 sm:order-1"
             >
               <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent sm:mt-0" />
-              <span>
+              <span className="min-w-0">
                 Hacé click acá si necesitás una{" "}
                 <span className="font-medium text-accent underline underline-offset-2">
                   cotización grupal o planes especiales
                 </span>
               </span>
             </a>
-            <Button type="submit" size="lg" disabled={isLoading} className="w-full md:w-auto">
+            <Button
+              type="submit"
+              size="lg"
+              disabled={isLoading}
+              className="w-full sm:w-auto shrink-0 order-1 sm:order-2"
+            >
               {isLoading ? (
-                <>
-                  <span className="animate-pulse">Cotizando...</span>
-                </>
+                <span className="animate-pulse">Cotizando...</span>
               ) : (
                 <>
                   Cotizar asistencia

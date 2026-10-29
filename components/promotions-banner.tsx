@@ -191,11 +191,11 @@ export function PromotionsBanner({ onNavigateToPromotions }: PromotionsBannerPro
 
   return (
     <div
-      className="mb-3"
+      className="mb-3 w-full min-w-0 max-w-full overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
         {showControls && (
           <button
             type="button"
@@ -207,11 +207,11 @@ export function PromotionsBanner({ onNavigateToPromotions }: PromotionsBannerPro
           </button>
         )}
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 overflow-hidden">
           <Carousel
             setApi={setApi}
             opts={{ align: "start", loop: true }}
-            className="w-full"
+            className="w-full max-w-full"
           >
             <CarouselContent className="-ml-0">
               {promos.map((promo) => (

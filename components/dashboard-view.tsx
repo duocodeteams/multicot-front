@@ -19,13 +19,14 @@ import { AdminPromotionsManagement } from "@/components/admin-promotions-managem
 import { PlanEmissionView } from "@/components/plan-emission-view"
 import type { SelectedPlan } from "@/components/plan-emission-view"
 import { PlanComparisonView } from "@/components/plan-comparison-view"
+import { IssuancesView } from "@/components/issuances-view"
 import type { Plan } from "@/components/quotation-results"
 import { useAuth } from "@/lib/auth-context"
 import { createQuote } from "@/lib/services"
 import { mapQuotationDataToApi } from "@/lib/services/quotes.mapper"
 import { toast } from "sonner"
 
-type ViewState = "form" | "loading" | "results" | "emission" | "comparison" | "promotions" | "settings" | "admin-users-agencies" | "admin-create-agency" | "admin-create-user" | "admin-management" | "admin-plans" | "admin-promotions"
+type ViewState = "form" | "loading" | "results" | "emission" | "comparison" | "promotions" | "issuances" | "settings" | "admin-users-agencies" | "admin-create-agency" | "admin-create-user" | "admin-management" | "admin-plans" | "admin-promotions"
 
 export function DashboardView() {
   const { loginResponse } = useAuth()
@@ -99,6 +100,10 @@ export function DashboardView() {
     setView("promotions")
   }
 
+  const handleNavigateToIssuances = () => {
+    setView("issuances")
+  }
+
   const handleNavigateToSettings = () => {
     setView("settings")
   }
@@ -132,6 +137,7 @@ export function DashboardView() {
       <AppSidebar 
         onNavigateToForm={handleNavigateToForm}
         onNavigateToPromotions={handleNavigateToPromotions}
+        onNavigateToIssuances={handleNavigateToIssuances}
         onNavigateToSettings={handleNavigateToSettings}
         onNavigateToAdminUsersAgencies={handleNavigateToAdminUsersAgencies}
         onNavigateToAdminCreateAgency={handleNavigateToAdminCreateAgency}
@@ -144,7 +150,7 @@ export function DashboardView() {
       <SidebarInset>
         <DashboardHeader currentView={view} />
         <PromotionsModal onNavigateToPromotions={handleNavigateToPromotions} />
-        <div className="flex-1 overflow-auto p-4 md:p-6 w-full min-w-0">
+        <div className="flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 md:p-6 w-full min-w-0 max-w-full">
           {view === "form" && (
             <>
               <PromotionsBanner onNavigateToPromotions={handleNavigateToPromotions} />
@@ -178,6 +184,7 @@ export function DashboardView() {
             />
           )}
           {view === "promotions" && <PromotionsView />}
+          {view === "issuances" && <IssuancesView />}
           {view === "settings" && <SettingsView />}
           {view === "admin-users-agencies" && <AdminUsersAgencies />}
           {view === "admin-create-agency" && <AdminCreateAgency />}

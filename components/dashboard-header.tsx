@@ -36,6 +36,7 @@ const VIEW_TITLES: Record<string, { label: string; section?: string }> = {
   results: { label: "Resultados", section: "Cotizador" },
   emission: { label: "Emitir Plan", section: "Cotizador" },
   promotions: { label: "Promociones" },
+  issuances: { label: "Emisiones", section: "Cotizador" },
   settings: { label: "Configuración" },
   "admin-users-agencies": { label: "Usuarios y Agencias", section: "Administración" },
   "admin-create-agency": { label: "Crear Agencia", section: "Administración" },
@@ -84,7 +85,7 @@ export function DashboardHeader({ currentView = "form" }: DashboardHeaderProps) 
 
 
   return (
-    <header className="w-full max-w-full overflow-hidden bg-blue-900 flex h-16 md:h-20 items-center justify-between border-b border-border bg-card px-3 md:px-6 shadow-sm">
+    <header className="w-full max-w-full min-w-0 overflow-hidden flex h-14 sm:h-16 md:h-20 items-center justify-between border-b border-border bg-card px-2 sm:px-3 md:px-6 shadow-sm">
 
       {/* IZQUIERDA */}
       <div className="flex items-center min-w-0 gap-2 md:gap-4">

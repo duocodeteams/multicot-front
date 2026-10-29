@@ -24,7 +24,7 @@ const LOGO_RULES: ReadonlyArray<readonly [RegExp, string]> = [
   [/inter/, "/portal/interlogo.png"],
   [/^go/, "/portal/gologo.png"],
   [/pax/, "/portal/paxlogo.png"],
-  [/omint/, "/portal/omint.webp"],
+  [/omint/, "/portal/oalogo.png"],
 ]
 
 /**
