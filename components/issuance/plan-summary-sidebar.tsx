@@ -25,6 +25,9 @@ type PlanSummarySidebarProps = {
   portalUrl?: string
   /** Compacto horizontal para mobile */
   variant?: "sidebar" | "compact"
+  /** Precio de la venta Omint (amount, markup 0). Si está, reemplaza el precio del cotizador. */
+  saleAmount?: number | null
+  saleCurrency?: string
 }
 
 export function PlanSummarySidebar({
@@ -32,6 +35,8 @@ export function PlanSummarySidebar({
   quotationData,
   portalUrl,
   variant = "sidebar",
+  saleAmount,
+  saleCurrency,
 }: PlanSummarySidebarProps) {
   const desde = new Date(quotationData.desde)
   const hasta = new Date(quotationData.hasta)
@@ -40,8 +45,13 @@ export function PlanSummarySidebar({
   const formatDate = (date: Date) =>
     date.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })
 
-  const priceLabel =
-    plan.priceUsd !== undefined
+  const hasSaleAmount = typeof saleAmount === "number" && Number.isFinite(saleAmount)
+  const priceLabel = hasSaleAmount
+    ? `${(saleCurrency || "ARS").toUpperCase()} ${new Intl.NumberFormat("es-AR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(saleAmount)}`
+    : plan.priceUsd !== undefined
       ? `USD ${formatNumber(plan.priceUsd)}`
       : plan.priceArs !== undefined
         ? `ARS ${formatNumber(plan.priceArs)}`
@@ -89,7 +99,8 @@ export function PlanSummarySidebar({
             </p>
           </div>
           <div className="text-right shrink-0">
-            {plan.badge &&
+            {!hasSaleAmount &&
+              plan.badge &&
               plan.basePriceUsd !== undefined &&
               plan.priceUsd !== undefined &&
               plan.basePriceUsd > plan.priceUsd && (
@@ -98,6 +109,9 @@ export function PlanSummarySidebar({
                 </p>
               )}
             <p className="text-sm font-bold text-foreground">{priceLabel}</p>
+            {hasSaleAmount && (
+              <p className="text-[10px] text-muted-foreground">precio Omint</p>
+            )}
           </div>
         </div>
       </aside>
@@ -149,9 +163,10 @@ export function PlanSummarySidebar({
         {/* Precio */}
         <div className="rounded-lg bg-primary/8 border border-primary/15 p-3">
           <p className="text-[10px] text-muted-foreground mb-0.5 uppercase tracking-wide">
-            Precio de venta
+            {hasSaleAmount ? "Precio Omint" : "Precio de venta"}
           </p>
-          {plan.badge &&
+          {!hasSaleAmount &&
+            plan.badge &&
             plan.basePriceUsd !== undefined &&
             plan.priceUsd !== undefined &&
             plan.basePriceUsd > plan.priceUsd && (
@@ -159,7 +174,8 @@ export function PlanSummarySidebar({
                 USD {formatNumber(plan.basePriceUsd)}
               </p>
             )}
-          {plan.badge &&
+          {!hasSaleAmount &&
+            plan.badge &&
             plan.priceUsd === undefined &&
             plan.basePriceArs !== undefined &&
             plan.priceArs !== undefined &&
@@ -169,21 +185,27 @@ export function PlanSummarySidebar({
               </p>
             )}
           <p className="text-2xl font-bold text-foreground leading-tight">{priceLabel}</p>
-          {plan.priceUsd !== undefined &&
-            plan.priceArs !== undefined &&
-            plan.exchange_rate !== 2 && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                ARS {formatNumber(plan.priceArs)}
-                {plan.exchange_rate && plan.exchange_rate > 2
-                  ? ` · TC ${formatNumber(plan.exchange_rate)}`
-                  : ""}
-              </p>
-            )}
-          {days > 0 && (
-            <p className="text-[11px] text-muted-foreground mt-1">
-              {plan.priceUsd !== undefined ? "USD" : "ARS"} {formatNumber(plan.pricePerDay)} / día
-              por persona
-            </p>
+          {hasSaleAmount ? (
+            <p className="text-[11px] text-muted-foreground mt-1">Sin markup del panel</p>
+          ) : (
+            <>
+              {plan.priceUsd !== undefined &&
+                plan.priceArs !== undefined &&
+                plan.exchange_rate !== 2 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    ARS {formatNumber(plan.priceArs)}
+                    {plan.exchange_rate && plan.exchange_rate > 2
+                      ? ` · TC ${formatNumber(plan.exchange_rate)}`
+                      : ""}
+                  </p>
+                )}
+              {days > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {plan.priceUsd !== undefined ? "USD" : "ARS"} {formatNumber(plan.pricePerDay)} / día
+                  por persona
+                </p>
+              )}
+            </>
           )}
           <div className="mt-2.5 pt-2.5 border-t border-primary/10">
             <p className="text-[10px] text-muted-foreground">Cobertura máxima</p>

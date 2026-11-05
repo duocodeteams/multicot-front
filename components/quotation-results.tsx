@@ -227,7 +227,9 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
       }
 
       return {
-        id: planData.plan_id,
+        // Omint: `id` = quotationId|productId (requerido por POST /v1/sales).
+        // Otras compañías también exponen `id` único; `plan_id` es el código de producto.
+        id: planData.id ?? planData.plan_id,
         name: planData.plan_name ?? planData.plan ?? "Plan",
         price,
         priceUsd,

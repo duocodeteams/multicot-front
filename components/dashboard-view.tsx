@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
@@ -19,24 +19,60 @@ import { AdminPromotionsManagement } from "@/components/admin-promotions-managem
 import { PlanEmissionView } from "@/components/plan-emission-view"
 import type { SelectedPlan } from "@/components/plan-emission-view"
 import { PlanComparisonView } from "@/components/plan-comparison-view"
+import { IssuancesView } from "@/components/issuances-view"
+import { OmintEmissionFlow } from "@/components/issuance/omint-emission-flow"
 import type { Plan } from "@/components/quotation-results"
-import { useAuth } from "@/lib/auth-context"
 import { createQuote } from "@/lib/services"
 import { mapQuotationDataToApi } from "@/lib/services/quotes.mapper"
+import {
+  getOmintSaleContext,
+  readOmintReturnParams,
+} from "@/lib/issuance/omint-session"
+import type { OmintPaymentReturnStatus } from "@/lib/issuance/omint-types"
 import { toast } from "sonner"
 
-type ViewState = "form" | "loading" | "results" | "emission" | "comparison" | "promotions" | "settings" | "admin-users-agencies" | "admin-create-agency" | "admin-create-user" | "admin-management" | "admin-plans" | "admin-promotions"
+type ViewState =
+  | "form"
+  | "loading"
+  | "results"
+  | "emission"
+  | "comparison"
+  | "promotions"
+  | "issuances"
+  | "settings"
+  | "admin-users-agencies"
+  | "admin-create-agency"
+  | "admin-create-user"
+  | "admin-management"
+  | "admin-plans"
+  | "admin-promotions"
 
 export function DashboardView() {
-  const { loginResponse } = useAuth()
   const [view, setView] = useState<ViewState>("form")
   const [quotationData, setQuotationData] = useState<QuotationData | null>(null)
   const [quotationResponse, setQuotationResponse] = useState<any | null>(null)
   const [selectedPlan, setSelectedPlan] = useState<SelectedPlan | null>(null)
   const [plansToCompare, setPlansToCompare] = useState<Plan[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [resumeSaleId, setResumeSaleId] = useState<string | null>(null)
+  const [paymentReturn, setPaymentReturn] = useState<OmintPaymentReturnStatus | null>(null)
 
+  // Retorno desde checkout Omint o resume por query
+  useEffect(() => {
+    const { saleId, payment } = readOmintReturnParams()
+    if (!saleId) return
 
+    const ctx = getOmintSaleContext()
+    setResumeSaleId(saleId)
+    setPaymentReturn(payment)
+
+    if (ctx?.plan && ctx?.quotationData) {
+      setSelectedPlan(ctx.plan)
+      setQuotationData(ctx.quotationData)
+    }
+
+    setView("emission")
+  }, [])
 
   const handleSubmit = async (data: QuotationData) => {
     setQuotationData(data)
@@ -44,16 +80,9 @@ export function DashboardView() {
     setIsLoading(true)
 
     try {
-      // Mapear los datos del formulario al formato de la API
       const apiData = mapQuotationDataToApi(data)
-      
-      // Hacer la petición al backend usando el servicio
       const response = await createQuote(apiData)
-
-      // Guardar la respuesta del backend
       setQuotationResponse(response)
-      
-      
       setView("results")
       toast.success("Cotización realizada", {
         description: "Se han encontrado opciones de asistencia",
@@ -75,10 +104,14 @@ export function DashboardView() {
 
   const handleSelectPlan = (plan: SelectedPlan) => {
     setSelectedPlan(plan)
+    setResumeSaleId(null)
+    setPaymentReturn(null)
     setView("emission")
   }
 
   const handleBackToResults = () => {
+    setResumeSaleId(null)
+    setPaymentReturn(null)
     setView("results")
   }
 
@@ -97,6 +130,10 @@ export function DashboardView() {
 
   const handleNavigateToPromotions = () => {
     setView("promotions")
+  }
+
+  const handleNavigateToIssuances = () => {
+    setView("issuances")
   }
 
   const handleNavigateToSettings = () => {
@@ -127,11 +164,16 @@ export function DashboardView() {
     setView("admin-promotions")
   }
 
+  const showFullEmission = view === "emission" && selectedPlan && quotationData
+  const showResumeOnlyEmission =
+    view === "emission" && resumeSaleId && !(selectedPlan && quotationData)
+
   return (
     <SidebarProvider>
-      <AppSidebar 
+      <AppSidebar
         onNavigateToForm={handleNavigateToForm}
         onNavigateToPromotions={handleNavigateToPromotions}
+        onNavigateToIssuances={handleNavigateToIssuances}
         onNavigateToSettings={handleNavigateToSettings}
         onNavigateToAdminUsersAgencies={handleNavigateToAdminUsersAgencies}
         onNavigateToAdminCreateAgency={handleNavigateToAdminCreateAgency}
@@ -169,15 +211,34 @@ export function DashboardView() {
               onSelectPlan={handleSelectPlan}
             />
           )}
-          {view === "emission" && selectedPlan && quotationData && (
+          {showFullEmission && (
             <PlanEmissionView
-              plan={selectedPlan}
-              quotationData={quotationData}
+              plan={selectedPlan!}
+              quotationData={quotationData!}
               onBack={handleBackToResults}
               onBackToForm={handleBack}
+              quoteId={String(selectedPlan!.id)}
+              initialSaleId={resumeSaleId}
+              paymentReturn={paymentReturn}
             />
           )}
+          {showResumeOnlyEmission && (
+            <div className="w-full max-w-3xl mx-auto flex flex-col gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Retomar emisión Omint</h2>
+                <p className="text-xs text-muted-foreground">
+                  Continuamos desde la venta {resumeSaleId}
+                </p>
+              </div>
+              <OmintEmissionFlow
+                initialSaleId={resumeSaleId}
+                paymentReturn={paymentReturn}
+                onBack={handleBack}
+              />
+            </div>
+          )}
           {view === "promotions" && <PromotionsView />}
+          {view === "issuances" && <IssuancesView />}
           {view === "settings" && <SettingsView />}
           {view === "admin-users-agencies" && <AdminUsersAgencies />}
           {view === "admin-create-agency" && <AdminCreateAgency />}
