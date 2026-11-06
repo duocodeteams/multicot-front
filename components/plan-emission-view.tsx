@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button"
 import type { QuotationData } from "@/components/quotation-form"
 import { EmissionWizard } from "@/components/issuance/emission-wizard"
 import { OmintEmissionFlow } from "@/components/issuance/omint-emission-flow"
+import { InterAssistEmissionFlow } from "@/components/issuance/inter-assist-emission-flow"
 import { PlanSummarySidebar } from "@/components/issuance/plan-summary-sidebar"
 import { normalizeCompanyCode } from "@/lib/issuance/schema-utils"
 import { isOmintCompany } from "@/lib/issuance/omint-session"
-import type { OmintPaymentReturnStatus } from "@/lib/issuance/omint-types"
+import { isInterAssistCompany } from "@/lib/issuance/inter-assist-session"
+import type { SalePaymentReturnStatus } from "@/lib/issuance/sales-types"
 import type { SelectedPlan } from "@/lib/issuance/types"
 
 export type { SelectedPlan }
@@ -19,13 +21,13 @@ type PlanEmissionViewProps = {
   quotationData: QuotationData
   onBack: () => void
   onBackToForm?: () => void
-  /** quote_id para Omint = plan_id del back (quotationId|productId) */
+  /** Omint: quotationId|productId. Inter Assist: plan_id. */
   quoteId?: string
   initialSaleId?: string | null
-  paymentReturn?: OmintPaymentReturnStatus | null
+  paymentReturn?: SalePaymentReturnStatus | null
 }
 
-/** Fallback temporal mientras no todas las compañías tengan API de emisión */
+/** Fallback portal mientras no haya API de emisión para esa compañía */
 const portalUrls: Record<string, string> = {
   cardinalassistance: "https://evoucher.cardinalassistance.com/bo/login",
   universalassistance: "https://ar.ec.universal-assistance.com/Emision/Login",
@@ -53,10 +55,18 @@ export function PlanEmissionView({
   const companyKey = normalizeCompanyCode(plan.empresaCotizacion)
   const portalUrl = portalUrls[companyKey]
   const omint = isOmintCompany(plan.empresaCotizacion)
+  const interAssist = isInterAssistCompany(plan.empresaCotizacion)
+  const hasApiEmission = omint || interAssist
   const resolvedQuoteId = quoteId || String(plan.id)
 
   const [saleAmount, setSaleAmount] = useState<number | null>(null)
   const [saleCurrency, setSaleCurrency] = useState<string | undefined>(undefined)
+
+  const subtitle = omint
+    ? `${plan.empresaCotizacion} · Completá los datos para emitir`
+    : interAssist
+      ? `${plan.empresaCotizacion} · Pasajeros, pago simulado y voucher`
+      : "Completá el formulario para emitir la asistencia seleccionada"
 
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-4">
@@ -68,19 +78,15 @@ export function PlanEmissionView({
           <h2 className="text-lg font-semibold text-foreground leading-tight truncate">
             {plan.name}
           </h2>
-          <p className="text-xs text-muted-foreground">
-            {omint
-              ? `${plan.empresaCotizacion} · Completá los datos para emitir`
-              : "Completá el formulario para emitir la asistencia seleccionada"}
-          </p>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
         </div>
       </div>
 
       <PlanSummarySidebar
         plan={plan}
         quotationData={quotationData}
-        portalUrl={omint ? undefined : portalUrl}
-        saleAmount={omint ? saleAmount : null}
+        portalUrl={hasApiEmission ? undefined : portalUrl}
+        saleAmount={hasApiEmission ? saleAmount : null}
         saleCurrency={saleCurrency}
         variant="compact"
       />
@@ -90,6 +96,18 @@ export function PlanEmissionView({
           {omint ? (
             <OmintEmissionFlow
               quoteId={resolvedQuoteId}
+              plan={plan}
+              quotationData={quotationData}
+              initialSaleId={initialSaleId}
+              paymentReturn={paymentReturn}
+              onSaleAmountChange={(amount, currency) => {
+                setSaleAmount(amount)
+                setSaleCurrency(currency)
+              }}
+              onBack={onBack}
+            />
+          ) : interAssist ? (
+            <InterAssistEmissionFlow
               plan={plan}
               quotationData={quotationData}
               initialSaleId={initialSaleId}
@@ -120,8 +138,8 @@ export function PlanEmissionView({
           <PlanSummarySidebar
             plan={plan}
             quotationData={quotationData}
-            portalUrl={omint ? undefined : portalUrl}
-            saleAmount={omint ? saleAmount : null}
+            portalUrl={hasApiEmission ? undefined : portalUrl}
+            saleAmount={hasApiEmission ? saleAmount : null}
             saleCurrency={saleCurrency}
             variant="sidebar"
           />

@@ -36,6 +36,8 @@ import {
 // ── Tipo Plan — solo campos reales del backend ────────────
 export type Plan = {
   id: string | number
+  /** Código de producto del back (`plan_id`). */
+  planId?: string | number
   name: string
   /** Precio principal para ordenar/compat: USD si hay, si no ARS. */
   price: number
@@ -227,9 +229,10 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
       }
 
       return {
-        // Omint: `id` = quotationId|productId (requerido por POST /v1/sales).
-        // Otras compañías también exponen `id` único; `plan_id` es el código de producto.
+        // Omint: `id` = quotationId|productId (POST /v1/sales quote_id).
+        // Inter Assist: quote_id = `plan_id` numérico (también en planId).
         id: planData.id ?? planData.plan_id,
+        planId: planData.plan_id,
         name: planData.plan_name ?? planData.plan ?? "Plan",
         price,
         priceUsd,

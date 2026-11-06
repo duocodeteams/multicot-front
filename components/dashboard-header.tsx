@@ -37,6 +37,7 @@ const VIEW_TITLES: Record<string, { label: string; section?: string }> = {
   emission: { label: "Emitir Plan", section: "Cotizador" },
   promotions: { label: "Promociones" },
   issuances: { label: "Emisiones", section: "Cotizador" },
+  "my-sales": { label: "Mis ventas", section: "Cotizador" },
   settings: { label: "Configuración" },
   "admin-users-agencies": { label: "Usuarios y Agencias", section: "Administración" },
   "admin-create-agency": { label: "Crear Agencia", section: "Administración" },

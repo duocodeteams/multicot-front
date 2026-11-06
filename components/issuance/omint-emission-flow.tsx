@@ -26,7 +26,6 @@ import { toast } from "sonner"
 import type { QuotationData } from "@/components/quotation-form"
 import type { SelectedPlan } from "@/lib/issuance/types"
 import type {
-  OmintCatalogItem,
   OmintDocumentType,
   OmintEmergencyContact,
   OmintPassenger,
@@ -41,13 +40,14 @@ import {
 import {
   buildOmintPaymentReturnUrls,
   confirmSalePayment,
-  createSale,
   createSalePayment,
-  getOmintCountries,
-  getOmintProvinces,
   getSale,
+  openOrResumeSale,
   postSalePassengers,
 } from "@/lib/services"
+import { persistOpenSale } from "@/lib/issuance/sale-persistence"
+import { useSaleLocationCatalog } from "@/hooks/use-sale-location-catalog"
+import { SaleLocationSelects } from "@/components/issuance/sale-location-selects"
 
 type Step = "loading" | "passengers" | "payment" | "confirming" | "done" | "error"
 
@@ -194,9 +194,6 @@ export function OmintEmissionFlow({
   const [receivePromotions, setReceivePromotions] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
-  const [countries, setCountries] = useState<OmintCatalogItem[]>([])
-  const [provinces, setProvinces] = useState<OmintCatalogItem[]>([])
-  const [loadingProvinces, setLoadingProvinces] = useState(false)
   const [submittingPassengers, setSubmittingPassengers] = useState(false)
 
   const [paymentMethods, setPaymentMethods] = useState<OmintPaymentMethod[]>([])
@@ -231,48 +228,57 @@ export function OmintEmissionFlow({
       if (next.payment_methods?.length) {
         setPaymentMethods(next.payment_methods)
       }
-      if (plan && quotationData && quoteId) {
-        saveOmintSaleContext({
-          saleId: String(next.id),
-          quoteId,
-          plan,
-          quotationData,
-        })
-      } else {
-        saveOmintSaleContext({
-          saleId: String(next.id),
-          quoteId: next.quote_id || quoteId || "",
-          plan: plan || {
-            id: next.quote_id || String(next.id),
-            name: next.plan_name || "Plan Omint",
-            price: next.amount,
-            pricePerDay: next.amount,
-            priceArs: next.amount,
-            badge: null,
-            coverage: [],
-            maxCoverage: "—",
-            empresaCotizacion: next.company_name || "Omint",
-            tarifaTotalUnPago: next.amount,
-            tarifaNeta: next.amount,
-            totalUsd: next.amount,
-          },
-          quotationData: quotationData || {
-            destino: "",
-            tipoViaje: "",
-            desde: next.departure_date || "",
-            hasta: "",
-            edades: (next.quoted_ages || []).map(String),
-            origen: "",
-          },
+      const resolvedQuoteId = quoteId || next.quote_id || ""
+      const resolvedPlan =
+        plan ||
+        ({
+          id: resolvedQuoteId || String(next.id),
+          name: next.plan_name || "Plan Omint",
+          price: Number(next.amount) || 0,
+          pricePerDay: Number(next.amount) || 0,
+          priceArs: Number(next.amount) || 0,
+          badge: null,
+          coverage: [],
+          maxCoverage: "—",
+          empresaCotizacion: next.company_name || "Omint",
+          tarifaTotalUnPago: Number(next.amount) || 0,
+          tarifaNeta: Number(next.amount) || 0,
+          totalUsd: Number(next.amount) || 0,
+        } satisfies SelectedPlan)
+      const resolvedQuotation =
+        quotationData ||
+        ({
+          destino: "",
+          tipoViaje: "",
+          desde: next.departure_date || "",
+          hasta: "",
+          edades: (next.quoted_ages || []).map(String),
+          origen: "",
+        } satisfies QuotationData)
+
+      if (resolvedQuoteId) {
+        persistOpenSale({
+          company: "omint",
+          quoteId: resolvedQuoteId,
+          saleId: next.id,
+          plan: resolvedPlan,
+          quotationData: resolvedQuotation,
         })
       }
+      saveOmintSaleContext({
+        saleId: String(next.id),
+        quoteId: resolvedQuoteId,
+        plan: resolvedPlan,
+        quotationData: resolvedQuotation,
+      })
     },
     [onSaleAmountChange, plan, quotationData, quoteId]
   )
 
   const resolveStepFromSale = useCallback(
     (next: OmintSale, returnStatus?: OmintPaymentReturnStatus | null) => {
-      if (next.emission_status === "issued" || next.payment_status === "approved") {
+      // Venta ya finalizada: retomar pantalla de voucher, no reiniciar el flujo.
+      if (next.emission_status === "issued") {
         setConfirmResult({
           payment_received: true,
           voucher_number: next.voucher_number,
@@ -312,7 +318,7 @@ export function OmintEmissionFlow({
 
       setStep("passengers")
     },
-    []
+    [quoteId]
   )
 
   // Init: create or resume sale
@@ -323,15 +329,18 @@ export function OmintEmissionFlow({
       setStep("loading")
       setErrorMessage(null)
       try {
-        let next: OmintSale
-
-        if (initialSaleId) {
-          next = await getSale(initialSaleId)
-        } else if (quoteId) {
-          next = await createSale({ company: "omint", quote_id: quoteId })
-        } else {
+        if (!quoteId && !initialSaleId) {
           throw new Error("Falta quote_id o sale_id para iniciar la emisión Omint")
         }
+
+        const next = (await openOrResumeSale({
+          company: "omint",
+          quoteId: quoteId || "",
+          preferredSaleId: initialSaleId,
+          createPayload: { company: "omint", quote_id: quoteId || "" },
+          plan: plan || undefined,
+          quotationData: quotationData || undefined,
+        })) as OmintSale
 
         if (cancelled) return
         applySale(next)
@@ -383,6 +392,7 @@ export function OmintEmissionFlow({
           const refreshed = await getSale(sale!.id)
           if (cancelled) return
           applySale(refreshed)
+          // Mantener sale_id: al volver se retoma por GET + emission_status=issued
           setStep("done")
           toast.success("Emisión confirmada", {
             description: result.voucher_number
@@ -415,56 +425,14 @@ export function OmintEmissionFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, sale?.id])
 
-  // Countries catalog
-  useEffect(() => {
-    let cancelled = false
-    async function loadCountries() {
-      try {
-        const items = await getOmintCountries()
-        if (!cancelled) setCountries(items)
-      } catch (err) {
-        if (!cancelled) {
-          toast.error("No se pudieron cargar los países", {
-            description: getApiErrorMessage(err),
-          })
-        }
-      }
-    }
-    loadCountries()
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
   const holderCountryId = passengers.find((p) => p.is_holder)?.country_id || ""
-
-  useEffect(() => {
-    if (!holderCountryId) {
-      setProvinces([])
-      return
-    }
-    let cancelled = false
-    async function loadProvinces() {
-      setLoadingProvinces(true)
-      try {
-        const items = await getOmintProvinces(holderCountryId)
-        if (!cancelled) setProvinces(items)
-      } catch (err) {
-        if (!cancelled) {
-          setProvinces([])
-          toast.error("No se pudieron cargar las provincias", {
-            description: getApiErrorMessage(err),
-          })
-        }
-      } finally {
-        if (!cancelled) setLoadingProvinces(false)
-      }
-    }
-    loadProvinces()
-    return () => {
-      cancelled = true
-    }
-  }, [holderCountryId])
+  const {
+    countries,
+    provinces,
+    loadingCountries,
+    loadingProvinces,
+    provinceRequired,
+  } = useSaleLocationCatalog("omint", holderCountryId)
 
   const updatePassenger = (index: number, patch: Partial<PassengerForm>) => {
     setPassengers((prev) =>
@@ -652,6 +620,9 @@ export function OmintEmissionFlow({
   }
 
   if (step === "error") {
+    const canRetryConfirm =
+      sale?.emission_status === "emission_failed" &&
+      (sale?.payment_status === "approved" || sale?.payment_status === "pending")
     return (
       <Card className="border-destructive/40">
         <CardHeader>
@@ -662,11 +633,18 @@ export function OmintEmissionFlow({
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground">{errorMessage}</p>
-          {onBack && (
-            <Button variant="outline" onClick={onBack} className="w-fit">
-              Volver
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {canRetryConfirm && (
+              <Button onClick={() => void handleRetryConfirm()} className="w-fit">
+                Reintentar confirmación
+              </Button>
+            )}
+            {onBack && (
+              <Button variant="outline" onClick={onBack} className="w-fit">
+                Volver
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     )
@@ -902,53 +880,28 @@ export function OmintEmissionFlow({
                   value={p.phone}
                   onChange={(v) => updatePassenger(index, { phone: v })}
                 />
-                <div className="flex flex-col gap-1.5">
-                  <Label>País</Label>
-                  <Select
-                    value={p.country_id}
-                    onValueChange={(v) => updatePassenger(index, { country_id: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccioná país" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {fieldErrors[`p.${index}.country_id`] && (
-                    <p className="text-xs text-destructive">{fieldErrors[`p.${index}.country_id`]}</p>
-                  )}
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <Label>Provincia</Label>
-                  <Select
-                    value={p.province_id}
-                    onValueChange={(v) => updatePassenger(index, { province_id: v })}
-                    disabled={!p.country_id || loadingProvinces}
-                  >
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={loadingProvinces ? "Cargando…" : "Seleccioná provincia"}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {provinces.map((prov) => (
-                        <SelectItem key={prov.id} value={prov.id}>
-                          {prov.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {fieldErrors[`p.${index}.province_id`] && (
-                    <p className="text-xs text-destructive">
-                      {fieldErrors[`p.${index}.province_id`]}
-                    </p>
-                  )}
-                </div>
+                <SaleLocationSelects
+                  countries={countries}
+                  provinces={provinces}
+                  loadingCountries={loadingCountries}
+                  loadingProvinces={loadingProvinces}
+                  provinceRequired={provinceRequired}
+                  value={{
+                    country_id: p.country_id,
+                    country: "",
+                    province_id: p.province_id,
+                    province: "",
+                  }}
+                  onChange={(next) =>
+                    updatePassenger(index, {
+                      country_id: next.country_id ?? p.country_id,
+                      province_id:
+                        next.province_id !== undefined ? next.province_id : p.province_id,
+                    })
+                  }
+                  countryError={fieldErrors[`p.${index}.country_id`]}
+                  provinceError={fieldErrors[`p.${index}.province_id`]}
+                />
                 <Field
                   label="Calle"
                   error={fieldErrors[`p.${index}.street`]}

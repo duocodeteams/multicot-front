@@ -88,7 +88,9 @@ apiClient.interceptors.response.use(
           (error.response.data as any)?.detail ||
           (error.response.data as any)?.error ||
           "No tienes permisos para realizar esta acción"
-        return Promise.reject(new Error(errorMessage))
+        const err = new Error(errorMessage) as Error & { status?: number }
+        err.status = status
+        return Promise.reject(err)
       }
 
       // El servidor respondió con un código de estado fuera del rango 2xx
@@ -97,7 +99,9 @@ apiClient.interceptors.response.use(
         (error.response.data as any)?.detail ||
         (error.response.data as any)?.error ||
         "Error en la petición"
-      return Promise.reject(new Error(errorMessage))
+      const err = new Error(errorMessage) as Error & { status?: number }
+      err.status = status
+      return Promise.reject(err)
     } else if (error.request) {
       // La petición fue hecha pero no se recibió respuesta
       return Promise.reject(new Error("No se pudo conectar con el servidor"))

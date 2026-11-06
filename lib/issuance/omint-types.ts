@@ -3,8 +3,10 @@
 export type OmintEmissionStatus =
   | "product_selected"
   | "passengers_complete"
+  | "emitting"
   | "issued"
   | "emission_failed"
+  | "cancelled"
 
 export type OmintPaymentStatus = "not_started" | "pending" | "approved"
 

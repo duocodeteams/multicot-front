@@ -6,6 +6,8 @@
 /** Plan seleccionado desde resultados de cotización, listo para emitir. */
 export type SelectedPlan = {
   id: string | number
+  /** Código de producto del back (`plan_id`). Inter Assist usa esto como quote_id. */
+  planId?: string | number
   name: string
   price: number
   pricePerDay: number
@@ -20,6 +22,7 @@ export type SelectedPlan = {
   coverage: string[]
   maxCoverage: string
   empresaCotizacion: string
+  companyRaw?: string
   imagen?: string
   tarifaTotalUnPago: number
   tarifaNeta: number

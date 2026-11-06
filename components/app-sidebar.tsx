@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { LayoutDashboard, Settings, HelpCircle, Users, Building2, UserPlus, Shield, LogOut, Layers, Megaphone, FileCheck2 } from "lucide-react"
+import { LayoutDashboard, Settings, HelpCircle, Users, Building2, UserPlus, Shield, LogOut, Layers, Megaphone, FileCheck2, ShoppingBag } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +34,7 @@ type AppSidebarProps = {
   onNavigateToForm?: () => void
   onNavigateToPromotions?: () => void
   onNavigateToIssuances?: () => void
+  onNavigateToMySales?: () => void
   onNavigateToSettings?: () => void
   onNavigateToAdminUsersAgencies?: () => void
   onNavigateToAdminCreateAgency?: () => void
@@ -48,6 +49,7 @@ export function AppSidebar({
   onNavigateToForm,
   onNavigateToPromotions,
   onNavigateToIssuances,
+  onNavigateToMySales,
   onNavigateToSettings,
   onNavigateToAdminUsersAgencies,
   onNavigateToAdminCreateAgency,
@@ -137,6 +139,16 @@ export function AppSidebar({
                 >
                   <Megaphone className="h-4 w-4" />
                   <span>Promociones</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={currentView === "my-sales"}
+                  tooltip="Mis ventas"
+                  onClick={onNavigateToMySales}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  <span>Mis ventas</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
