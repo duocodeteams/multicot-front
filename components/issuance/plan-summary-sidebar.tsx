@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import type { QuotationData } from "@/components/quotation-form"
 import type { SelectedPlan } from "@/lib/issuance/types"
+import { formatCalendarDateShort, inclusiveTripDays } from "@/lib/date-utils"
 
 const destinationLabels: Record<string, string> = {
   "1001": "Europa",
@@ -38,12 +39,7 @@ export function PlanSummarySidebar({
   saleAmount,
   saleCurrency,
 }: PlanSummarySidebarProps) {
-  const desde = new Date(quotationData.desde)
-  const hasta = new Date(quotationData.hasta)
-  const days = Math.ceil((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)) || 1
-
-  const formatDate = (date: Date) =>
-    date.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })
+  const days = inclusiveTripDays(quotationData.desde, quotationData.hasta)
 
   const hasSaleAmount = typeof saleAmount === "number" && Number.isFinite(saleAmount)
   const priceLabel = hasSaleAmount
@@ -227,11 +223,11 @@ export function PlanSummarySidebar({
             </div>
             <div className="flex justify-between gap-2">
               <dt className="text-muted-foreground">Desde</dt>
-              <dd className="font-medium">{formatDate(desde)}</dd>
+              <dd className="font-medium">{formatCalendarDateShort(quotationData.desde)}</dd>
             </div>
             <div className="flex justify-between gap-2">
               <dt className="text-muted-foreground">Hasta</dt>
-              <dd className="font-medium">{formatDate(hasta)}</dd>
+              <dd className="font-medium">{formatCalendarDateShort(quotationData.hasta)}</dd>
             </div>
             <div className="flex justify-between gap-2">
               <dt className="text-muted-foreground">Duración</dt>

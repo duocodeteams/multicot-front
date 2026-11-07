@@ -32,6 +32,7 @@ import {
   COMPANY_LOGO_CARD_CLASS,
   COMPANY_LOGO_COMPACT_CLASS,
 } from "@/lib/company-logo"
+import { formatCalendarDateShort, inclusiveTripDays } from "@/lib/date-utils"
 
 // ── Tipo Plan — solo campos reales del backend ────────────
 export type Plan = {
@@ -315,9 +316,7 @@ function generatePlansFromBackend(backendResponse: any, days: number): Plan[] | 
 
 // Planes de fallback (cuando no hay respuesta del backend)
 function generatePlans(data: QuotationData): Plan[] {
-  const desde = new Date(data.desde)
-  const hasta = new Date(data.hasta)
-  const days = Math.ceil((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)) || 7
+  const days = inclusiveTripDays(data.desde, data.hasta, 7)
   const passengerCount = data.edades.length
   const baseMultiplier =
     data.destino === "1001" || data.destino === "1004" ? 1.5 : data.destino === "1003" ? 1.3 : 1
@@ -703,9 +702,7 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
   const [sortBy, setSortBy] = useState<"promo" | "price-asc" | "price-desc" | "coverage-asc" | "coverage-desc">("promo")
   const [selectedCompanies, setSelectedCompanies] = useState<Set<string>>(new Set())
 
-  const desde = new Date(data.desde)
-  const hasta = new Date(data.hasta)
-  const days = Math.ceil((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)) || 1
+  const days = inclusiveTripDays(data.desde, data.hasta)
 
   const allPlans = generatePlansFromBackend(backendResponse, days) || generatePlans(data)
   const availableCompanies = Array.from(
@@ -754,9 +751,6 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
     })
   }
 
-  const formatDateDisplay = (date: Date) =>
-    date.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })
-
   return (
     <div className="flex flex-col gap-6">
 
@@ -794,7 +788,10 @@ export function QuotationResults({ data, backendResponse, onBack, onSelectPlan, 
       {/* ── Strip de info del viaje ── */}
       <div className="rounded-xl border border-border bg-muted/30 p-4 flex flex-wrap gap-2">
         <InfoPill icon={MapPin} label={destinationLabels[data.destino] || data.destino} />
-        <InfoPill icon={CalendarDays} label={`${formatDateDisplay(desde)} → ${formatDateDisplay(hasta)}`} />
+        <InfoPill
+          icon={CalendarDays}
+          label={`${formatCalendarDateShort(data.desde)} → ${formatCalendarDateShort(data.hasta)}`}
+        />
         <InfoPill icon={Clock} label={`${days} día${days > 1 ? "s" : ""}`} />
         <InfoPill icon={Users} label={`${data.edades.length} pasajero${data.edades.length > 1 ? "s" : ""} (${data.edades.join(", ")} años)`} />
         {data.tipoViaje && <InfoPill icon={Star} label={tripTypeLabels[data.tipoViaje] || data.tipoViaje} />}

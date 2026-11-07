@@ -1,8 +1,8 @@
 /**
- * Persistencia de ventas abiertas (localStorage).
+ * Persistencia de ventas abiertas (localStorage), aislada por usuario.
  * El back no cancela al salir del menú: el front guarda sale_id y retoma.
  *
- * Clave:
+ * Clave por usuario:
  * - Omint: company::quote_id (quotationId|productId)
  * - Inter Assist: company::fingerprint del viaje (mismas piezas que el reference del back)
  */
@@ -13,7 +13,8 @@ import type { SelectedPlan } from "@/lib/issuance/types"
 import type { SaleCompanySlug } from "@/lib/issuance/sales-types"
 import { rememberMySaleId } from "@/lib/issuance/my-sales-persistence"
 
-const STORE_KEY = "multicot_open_sales_v2"
+const STORE_KEY = "multicot_open_sales_v3"
+const LEGACY_STORE_KEY = "multicot_open_sales_v2"
 
 export type PersistedSaleBinding = {
   company: SaleCompanySlug
@@ -28,26 +29,64 @@ export type PersistedSaleBinding = {
 }
 
 type StoreMap = Record<string, PersistedSaleBinding>
+type UserStoreMap = Record<string, StoreMap>
+
+function readAuthUserId(): string | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = localStorage.getItem("auth_user")
+    if (!raw) return null
+    const user = JSON.parse(raw) as { id?: number | string }
+    if (user?.id === undefined || user?.id === null) return null
+    return String(user.id)
+  } catch {
+    return null
+  }
+}
 
 function fullKey(company: SaleCompanySlug, storageKey: string): string {
   return `${company}::${storageKey}`
 }
 
-function readStore(): StoreMap {
+function dropLegacyStore() {
+  if (typeof window === "undefined") return
+  localStorage.removeItem(LEGACY_STORE_KEY)
+}
+
+function readUserStoreMap(): UserStoreMap {
   if (typeof window === "undefined") return {}
+  dropLegacyStore()
   try {
     const raw = localStorage.getItem(STORE_KEY)
     if (!raw) return {}
-    const parsed = JSON.parse(raw) as StoreMap
+    const parsed = JSON.parse(raw) as UserStoreMap
     return parsed && typeof parsed === "object" ? parsed : {}
   } catch {
     return {}
   }
 }
 
-function writeStore(store: StoreMap) {
+function writeUserStoreMap(store: UserStoreMap) {
   if (typeof window === "undefined") return
   localStorage.setItem(STORE_KEY, JSON.stringify(store))
+}
+
+function readStore(userId?: string | number | null): StoreMap {
+  const uid = userId != null ? String(userId) : readAuthUserId()
+  if (!uid) return {}
+  return readUserStoreMap()[uid] ?? {}
+}
+
+function writeStore(next: StoreMap, userId?: string | number | null) {
+  const uid = userId != null ? String(userId) : readAuthUserId()
+  if (!uid) return
+  const all = readUserStoreMap()
+  if (Object.keys(next).length === 0) {
+    delete all[uid]
+  } else {
+    all[uid] = next
+  }
+  writeUserStoreMap(all)
 }
 
 /**
@@ -157,4 +196,18 @@ export function getMostRecentOpenSale(): PersistedSaleBinding | null {
   const entries = Object.values(readStore())
   if (entries.length === 0) return null
   return entries.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0] ?? null
+}
+
+/** IDs de ventas abiertas del usuario autenticado (o el indicado). */
+export function listOpenSaleIds(userId?: string | number | null): string[] {
+  return Object.values(readStore(userId))
+    .map((entry) => String(entry.saleId ?? ""))
+    .filter((id) => id && id !== "undefined" && id !== "null")
+}
+
+/** Borra ventas abiertas de todos los usuarios y la clave legacy. */
+export function clearAllOpenSales() {
+  if (typeof window === "undefined") return
+  localStorage.removeItem(STORE_KEY)
+  localStorage.removeItem(LEGACY_STORE_KEY)
 }

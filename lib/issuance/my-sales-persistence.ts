@@ -4,7 +4,8 @@
  */
 
 const STORE_KEY = "multicot_my_sale_ids_v1"
-const OPEN_SALES_KEY = "multicot_open_sales_v2"
+const OPEN_SALES_KEY = "multicot_open_sales_v3"
+const LEGACY_OPEN_SALES_KEY = "multicot_open_sales_v2"
 
 type StoreMap = Record<string, string[]>
 
@@ -38,15 +39,18 @@ function writeStore(store: StoreMap) {
   localStorage.setItem(STORE_KEY, JSON.stringify(store))
 }
 
-/** IDs de ventas abiertas (legacy / retomables) para no perder historial previo. */
-function readOpenSaleIds(): string[] {
-  if (typeof window === "undefined") return []
+/** Solo ventas abiertas del usuario indicado (no mezcla con otros). */
+function readOpenSaleIdsForUser(userId: string | null): string[] {
+  if (!userId || typeof window === "undefined") return []
   try {
+    localStorage.removeItem(LEGACY_OPEN_SALES_KEY)
     const raw = localStorage.getItem(OPEN_SALES_KEY)
     if (!raw) return []
-    const parsed = JSON.parse(raw) as Record<string, { saleId?: string }>
+    const parsed = JSON.parse(raw) as Record<string, Record<string, { saleId?: string }>>
     if (!parsed || typeof parsed !== "object") return []
-    return Object.values(parsed)
+    const userStore = parsed[userId]
+    if (!userStore || typeof userStore !== "object") return []
+    return Object.values(userStore)
       .map((e) => String(e?.saleId ?? ""))
       .filter((id) => id && id !== "undefined" && id !== "null")
   } catch {
@@ -94,13 +98,13 @@ export function forgetMySaleId(
 }
 
 /**
- * IDs conocidos del usuario (lista propia + ventas abiertas legacy).
+ * IDs conocidos del usuario (lista propia + ventas abiertas de ese usuario).
  * Cuando exista GET /v1/sales, este helper deja de usarse desde listMySales.
  */
 export function listRememberedSaleIds(userId?: string | number | null): string[] {
   const uid = userId != null ? String(userId) : readAuthUserId()
   const fromUser = uid ? readStore()[uid] ?? [] : []
-  const fromOpen = readOpenSaleIds()
+  const fromOpen = readOpenSaleIdsForUser(uid)
   const seen = new Set<string>()
   const ordered: string[] = []
   for (const id of [...fromUser, ...fromOpen]) {

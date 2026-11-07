@@ -6,6 +6,53 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from "axios"
+import { clearClientSessionData } from "./clear-client-session"
+
+/** Error de API con el status HTTP, para distinguir 404, 422 y 500 en la UI. */
+export class ApiRequestError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = "ApiRequestError"
+    this.status = status
+  }
+}
+
+export function getApiErrorStatus(error: unknown): number | undefined {
+  if (error instanceof ApiRequestError) return error.status
+  if (error && typeof error === "object" && "status" in error) {
+    const status = (error as { status?: unknown }).status
+    return typeof status === "number" ? status : undefined
+  }
+  return undefined
+}
+
+function readApiErrorMessage(data: unknown, fallback: string): string {
+  if (!data || typeof data !== "object") return fallback
+
+  const body = data as Record<string, unknown>
+  for (const key of ["message", "detail", "error"] as const) {
+    const value = body[key]
+    if (typeof value === "string" && value.trim()) return value.trim()
+    if (!Array.isArray(value)) continue
+
+    const parts = value
+      .map((item) => {
+        if (typeof item === "string" && item.trim()) return item.trim()
+        if (item && typeof item === "object" && "msg" in item) {
+          const msg = (item as { msg?: unknown }).msg
+          if (typeof msg === "string" && msg.trim()) return msg.trim()
+        }
+        return null
+      })
+      .filter((part): part is string => Boolean(part))
+
+    if (parts.length > 0) return parts.join(". ")
+  }
+
+  return fallback
+}
 
 /**
  * URL base del backend API
@@ -70,38 +117,30 @@ apiClient.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
 
-      // Si el token es inválido o expiró (401), limpiar autenticación
+      // Si el token es inválido o expiró (401), limpiar autenticación y datos de sesión
       if (status === 401) {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("auth_token")
-          localStorage.removeItem("auth_refresh_token")
-          localStorage.removeItem("auth_user")
-        }
+        clearClientSessionData()
 
-        return Promise.reject(new Error("Credenciales inválidas o sesión expirada. Por favor, inicia sesión nuevamente."))
+        return Promise.reject(
+          new ApiRequestError(
+            "Credenciales inválidas o sesión expirada. Por favor, inicia sesión nuevamente.",
+            status
+          )
+        )
       }
 
       // Si es 403 (Forbidden), puede ser por permisos insuficientes
       if (status === 403) {
-        const errorMessage =
-          (error.response.data as any)?.message ||
-          (error.response.data as any)?.detail ||
-          (error.response.data as any)?.error ||
+        const errorMessage = readApiErrorMessage(
+          error.response.data,
           "No tienes permisos para realizar esta acción"
-        const err = new Error(errorMessage) as Error & { status?: number }
-        err.status = status
-        return Promise.reject(err)
+        )
+        return Promise.reject(new ApiRequestError(errorMessage, status))
       }
 
       // El servidor respondió con un código de estado fuera del rango 2xx
-      const errorMessage =
-        (error.response.data as any)?.message ||
-        (error.response.data as any)?.detail ||
-        (error.response.data as any)?.error ||
-        "Error en la petición"
-      const err = new Error(errorMessage) as Error & { status?: number }
-      err.status = status
-      return Promise.reject(err)
+      const errorMessage = readApiErrorMessage(error.response.data, "Error en la petición")
+      return Promise.reject(new ApiRequestError(errorMessage, status))
     } else if (error.request) {
       // La petición fue hecha pero no se recibió respuesta
       return Promise.reject(new Error("No se pudo conectar con el servidor"))
@@ -140,4 +179,3 @@ export function getAuthHeaders(token?: string): Record<string, string> {
 
   return headers
 }
-

@@ -171,6 +171,22 @@ export interface ListAgenciesParams {
   offset?: number // default: 0
 }
 
+/** Credenciales propias de una compañía para una agencia (mapa clave → valor). */
+export type AgencyCompanyCredentials = Record<string, string>
+
+export interface AgencyCredentialItem {
+  company_slug: string
+  company_name: string
+  uses_default: boolean
+  credentials: AgencyCompanyCredentials | null
+}
+
+export interface ListAgencyCredentialsResponse {
+  items: AgencyCredentialItem[]
+}
+
+export type SaveAgencyCredentialsRequest = AgencyCompanyCredentials
+
 // ==================== VENDEDORES ====================
 
 export interface SellerUser {

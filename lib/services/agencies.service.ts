@@ -11,6 +11,10 @@ import type {
   UpdateAgencyRequest,
   ListAgenciesResponse,
   ListAgenciesParams,
+  AgencyCredentialItem,
+  AgencyCompanyCredentials,
+  ListAgencyCredentialsResponse,
+  SaveAgencyCredentialsRequest,
 } from "./types"
 
 /**
@@ -60,4 +64,72 @@ export async function updateAgency(
  */
 export async function deleteAgency(agencyId: number): Promise<void> {
   await apiClient.delete(`/v1/agencies/${agencyId}`)
+}
+
+function readCompanyCredentials(value: unknown): AgencyCompanyCredentials | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null
+  const record = value as Record<string, unknown>
+  const credentials: AgencyCompanyCredentials = {}
+  for (const [key, entry] of Object.entries(record)) {
+    if (typeof entry === "string") credentials[key] = entry
+    else if (entry == null) credentials[key] = ""
+    else credentials[key] = String(entry)
+  }
+  return credentials
+}
+
+function normalizeCredentialItem(item: AgencyCredentialItem): AgencyCredentialItem {
+  const usesDefault = Boolean(item.uses_default)
+  return {
+    company_slug: item.company_slug,
+    company_name: item.company_name,
+    uses_default: usesDefault,
+    credentials: usesDefault ? null : readCompanyCredentials(item.credentials),
+  }
+}
+
+/**
+ * Listar credenciales de una agencia (multi-compañía).
+ * Solo ADMIN. 404 si la agencia no existe o está inactiva.
+ */
+export async function getAgencyCredentials(
+  agencyId: number
+): Promise<ListAgencyCredentialsResponse> {
+  const response = await apiClient.get<ListAgencyCredentialsResponse>(
+    `/v1/agencies/${agencyId}/credentials`
+  )
+  return {
+    items: (response.data.items ?? []).map(normalizeCredentialItem),
+  }
+}
+
+/**
+ * Reemplaza las credenciales de una compañía.
+ * Enviar todas las keys del schema: si se omite un secreto, el back puede borrarlo.
+ */
+export async function saveAgencyCredentials(
+  agencyId: number,
+  companySlug: string,
+  data: SaveAgencyCredentialsRequest
+): Promise<AgencyCredentialItem> {
+  const slug = companySlug.trim()
+  const response = await apiClient.put<AgencyCredentialItem>(
+    `/v1/agencies/${agencyId}/credentials/${encodeURIComponent(slug)}`,
+    data
+  )
+  return normalizeCredentialItem(response.data)
+}
+
+/**
+ * Borra las credenciales propias de una compañía.
+ * 204. El próximo listado vuelve a uses_default: true para ese slug.
+ */
+export async function deleteAgencyCredentials(
+  agencyId: number,
+  companySlug: string
+): Promise<void> {
+  const slug = companySlug.trim()
+  await apiClient.delete(
+    `/v1/agencies/${agencyId}/credentials/${encodeURIComponent(slug)}`
+  )
 }

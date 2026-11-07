@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { listAgencies, listSellers, adminChangeUserPassword } from "@/lib/services"
+import { AgencyCredentialsSection } from "@/components/admin-agency-credentials"
 import type { AgencyResponse, SellerResponse } from "@/lib/services/types"
 import { useAuth } from "@/lib/auth-context"
 import { toast } from "sonner"
@@ -717,6 +718,8 @@ export function AdminUsersAgencies() {
                   </div>
                 </div>
               </section>
+
+              <AgencyCredentialsSection key={selectedAgency.id} agencyId={selectedAgency.id} />
             </div>
           )}
         </DialogContent>

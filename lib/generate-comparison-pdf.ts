@@ -2,6 +2,7 @@ import type { Plan } from "@/components/quotation-results"
 import { getCompanyTheme, formatNumber } from "@/components/quotation-results"
 import type { QuotationData } from "@/components/quotation-form"
 import { getCompanyLogo } from "@/lib/company-logo"
+import { formatCalendarDateShort, inclusiveTripDays } from "@/lib/date-utils"
 
 const DESTINATION_LABELS: Record<string, string> = {
   "1001": "Europa",
@@ -19,10 +20,6 @@ function uniqueCoverages(plan: Plan): string[] {
     if (!seen.has(norm)) { seen.add(norm); result.push(item) }
   }
   return result
-}
-
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })
 }
 
 // ── Convierte una imagen local a base64 para embeber en el HTML ───────────
@@ -47,11 +44,10 @@ export async function downloadComparisonPDF(
   selected: Plan[],
   quotationData: QuotationData,
 ): Promise<void> {
-  const fromDate  = new Date(quotationData.desde)
-  const toDate    = new Date(quotationData.hasta)
-  const days      = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)) || 1
+  const days      = inclusiveTripDays(quotationData.desde, quotationData.hasta)
   const today     = new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
   const destLabel = DESTINATION_LABELS[quotationData.destino] || quotationData.destino
+  const dateRangeLabel = `${formatCalendarDateShort(quotationData.desde)} → ${formatCalendarDateShort(quotationData.hasta)}`
 
   const themes         = selected.map((p) => getCompanyTheme(p.empresaCotizacion))
   const coverages      = selected.map((p) => uniqueCoverages(p))
@@ -260,7 +256,7 @@ export async function downloadComparisonPDF(
     <!-- Pills de viaje -->
     <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;flex:1;">
       <span style="${pillStyle}">📍 ${destLabel}</span>
-      <span style="${pillStyle}">📅 ${fmtDate(fromDate)} → ${fmtDate(toDate)}</span>
+      <span style="${pillStyle}">📅 ${dateRangeLabel}</span>
       <span style="${pillStyle}">🕐 ${days} día${days !== 1 ? "s" : ""}</span>
       <span style="${pillStyle}">👤 ${quotationData.edades.length} pax · ${quotationData.edades.join(", ")} años</span>
     </div>

@@ -25,6 +25,7 @@ import {
   getCompanyTheme,
   formatNumber,
 } from "@/components/quotation-results"
+import { formatCalendarDateShort, inclusiveTripDays } from "@/lib/date-utils"
 import {
   resolvePlanLogo,
   COMPANY_LOGO_COMPACT_CLASS,
@@ -481,13 +482,7 @@ export function PlanComparisonView({
 }: PlanComparisonViewProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set())
 
-  const desde = new Date(quotationData.desde)
-  const hasta = new Date(quotationData.hasta)
-  const days =
-    Math.ceil((hasta.getTime() - desde.getTime()) / (1000 * 60 * 60 * 24)) || 1
-
-  const formatDate = (d: Date) =>
-    d.toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })
+  const days = inclusiveTripDays(quotationData.desde, quotationData.hasta)
 
   const handleDownloadPdf = () => {
     const selectedPlansSnap = plans.filter((p) => selectedIds.has(p.id))
@@ -498,7 +493,7 @@ export function PlanComparisonView({
 
     const origin = window.location.origin
     const destLabel = destinationLabels[quotationData.destino] || quotationData.destino
-    const dateStr = `${formatDate(desde)} → ${formatDate(hasta)}`
+    const dateStr = `${formatCalendarDateShort(quotationData.desde)} → ${formatCalendarDateShort(quotationData.hasta)}`
     const daysStr = `${days} día${days > 1 ? "s" : ""}`
     const paxStr = `${quotationData.edades.length} pasajero${quotationData.edades.length > 1 ? "s" : ""} · ${quotationData.edades.join(", ")} años`
     const todayStr = new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
@@ -698,7 +693,7 @@ export function PlanComparisonView({
         />
         <InfoPill
           icon={CalendarDays}
-          label={`${formatDate(desde)} → ${formatDate(hasta)}`}
+          label={`${formatCalendarDateShort(quotationData.desde)} → ${formatCalendarDateShort(quotationData.hasta)}`}
         />
         <InfoPill icon={Clock} label={`${days} día${days > 1 ? "s" : ""}`} />
         <InfoPill

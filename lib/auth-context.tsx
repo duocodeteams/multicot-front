@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { login as loginService } from "./services"
-import { clearPromotionsModalSeen } from "./promotions-modal"
+import { clearClientSessionData } from "./clear-client-session"
 
 type User = {
   id: number
@@ -57,10 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(parsedUser)
         } catch (error) {
           console.error("Error al recuperar datos de autenticación:", error)
-          // Limpiar datos corruptos
-          localStorage.removeItem(AUTH_TOKEN_KEY)
-          localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY)
-          localStorage.removeItem(AUTH_USER_KEY)
+          clearClientSessionData()
         }
       }
       setIsLoading(false)
@@ -87,11 +84,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false
       }
       
-      // Guardar token en localStorage y estado
+      // Limpiar sesión previa (cotizaciones/ventas de otro usuario) y guardar la nueva
       if (typeof window !== "undefined") {
+        clearClientSessionData()
         localStorage.setItem(AUTH_TOKEN_KEY, authToken)
         setToken(authToken)
-        
+
         // Si hay refresh token, también guardarlo
         const refreshToken = (data as any).refreshToken || (data as any).refresh_token
         if (refreshToken) {
@@ -144,13 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
     setLoginResponse(null)
     setToken(null)
-
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(AUTH_TOKEN_KEY)
-      localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY)
-      localStorage.removeItem(AUTH_USER_KEY)
-      clearPromotionsModalSeen()
-    }
+    clearClientSessionData()
   }, [])
 
   return (
